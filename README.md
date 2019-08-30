@@ -1,1 +1,5 @@
-# predict
+# Plasma Prediction App
+
+```
+truffle compile
+```

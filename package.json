@@ -1,0 +1,23 @@
+{
+  "name": "predict",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maticnetwork/predict.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/maticnetwork/predict/issues"
+  },
+  "homepage": "https://github.com/maticnetwork/predict#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^2.3.0",
+    "matic-protocol": "github:maticnetwork/contracts#dev-tests-cleanup"
+  }
+}
