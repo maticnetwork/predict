@@ -42,11 +42,14 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    // development: {
-    //  host: "127.0.0.1",     // Localhost (default: none)
-    //  port: 8545,            // Standard Ethereum port (default: none)
-    //  network_id: "*",       // Any network (default: none)
-    // },
+    development: {
+    //  provider: () => new HDWalletProvider(mnemonic, `https://ropsten.infura.io/v3/YOUR-PROJECT-ID`),
+     host: "127.0.0.1",     // Localhost (default: none)
+    //  host: 'ws://localhost',
+     port: 8546,            // Standard Ethereum port (default: none)
+     network_id: "*",       // Any network (default: none)
+     websockets: true
+    },
 
     // Another network with more advanced options...
     // advanced: {
