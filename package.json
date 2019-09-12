@@ -18,6 +18,7 @@
   "homepage": "https://github.com/maticnetwork/predict#readme",
   "dependencies": {
     "@openzeppelin/contracts": "^2.3.0",
-    "matic-protocol": "github:maticnetwork/contracts#dev-tests-cleanup"
+    "matic-protocol": "github:maticnetwork/contracts#dev-tests-cleanup",
+    "solidity-rlp": "^2.0.1"
   }
 }
