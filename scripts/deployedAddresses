@@ -1,0 +1,151 @@
+yarn run v1.13.0
+$ npm run deploy:net -- environment
+
+> @augurproject/core@10.0.0-alpha.1 deploy:net /Users/arpit/matic/augur/packages/augur-core
+> bash ./source/support/deploy/run.sh direct "environment"
+
+Deploying to environment
+Processing 48 contracts
+
+
+-----------------
+Deploying to: environment
+    compiled contracts: /Users/arpit/matic/augur/packages/augur-core/output/contracts/contracts.json
+    contract address: /Users/arpit/matic/augur/packages/augur-core/output/contracts/addresses.json
+    upload blocks #s: /Users/arpit/matic/augur/packages/augur-core/output/contracts/upload-block-numbers.json
+
+Uploading augur...
+Upload contract: Augur
+Uploaded contract: Augur: "0x1Ee86549E365Bfb1f18bd6874C74499E6a79bd7a"
+Augur address: 0x1Ee86549E365Bfb1f18bd6874C74499E6a79bd7a
+Uploading contracts...
+Uploading new version of contract for ERC1820Registry
+Upload contract: ERC1820Registry
+Uploading new version of contract for LegacyReputationToken
+Upload contract: LegacyReputationToken
+Uploading new version of contract for RepPriceOracle
+Upload contract: RepPriceOracle
+Uploading new version of contract for TestOrders
+Upload contract: TestOrders
+Uploading new version of contract for Time
+Upload contract: Time
+Uploading new version of contract for ZeroXExchange
+Upload contract: ZeroXExchange
+Uploading new version of contract for DisputeCrowdsourcerFactory
+Upload contract: DisputeCrowdsourcerFactory
+Uploading new version of contract for DisputeWindowFactory
+Upload contract: DisputeWindowFactory
+Uploading new version of contract for InitialReporterFactory
+Upload contract: InitialReporterFactory
+Uploading new version of contract for MapFactory
+Upload contract: MapFactory
+Uploading new version of contract for MarketFactory
+Upload contract: MarketFactory
+Uploading new version of contract for OICashFactory
+Upload contract: OICashFactory
+Uploading new version of contract for ReputationTokenFactory
+Upload contract: TestNetReputationTokenFactory
+Uploading new version of contract for ShareTokenFactory
+Upload contract: ShareTokenFactory
+Uploading new version of contract for UniverseFactory
+Upload contract: UniverseFactory
+Uploading new version of contract for Map
+Upload contract: Map
+Uploading new version of contract for DisputeCrowdsourcer
+Upload contract: DisputeCrowdsourcer
+Uploading new version of contract for DisputeWindow
+Upload contract: DisputeWindow
+Uploading new version of contract for InitialReporter
+Upload contract: InitialReporter
+Uploading new version of contract for Market
+Upload contract: Market
+Uploading new version of contract for Reporting
+Upload contract: Reporting
+Uploading new version of contract for CancelOrder
+Upload contract: CancelOrder
+Uploading new version of contract for ClaimTradingProceeds
+Upload contract: ClaimTradingProceeds
+Uploading new version of contract for CompleteSets
+Upload contract: CompleteSets
+Uploading new version of contract for CreateOrder
+Upload contract: CreateOrder
+Uploading new version of contract for FillOrder
+Upload contract: FillOrder
+Uploading new version of contract for OICash
+Upload contract: OICash
+Uploading new version of contract for Orders
+Upload contract: Orders
+Uploading new version of contract for ProfitLoss
+Upload contract: ProfitLoss
+Uploading new version of contract for ShareToken
+Upload contract: ShareToken
+Uploading new version of contract for SimulateTrade
+Upload contract: SimulateTrade
+Uploading new version of contract for Trade
+Upload contract: Trade
+Uploading new version of contract for ZeroXTradeToken
+Upload contract: ZeroXTradeToken
+Uploading new version of contract for Formulas
+Upload contract: Formulas
+Uploading new version of contract for RedeemStake
+Upload contract: RedeemStake
+Uploaded contract: Time: "0x480Ddfb78aeB717571D50D8a507CD4E97EC9A8F5"
+Uploaded contract: RepPriceOracle: "0x9C4053bf886D4C2FDe40216Bcf95e480E6E0b47D"
+Uploaded contract: TestOrders: "0x7EDF60D4a481F77DF260fCe4A521d36556f0DD8e"
+Uploaded contract: ERC1820Registry: "0xf5351E7623bEE7Bb939be4d4fe5d9b2000d60a1A"
+Uploaded contract: LegacyReputationToken: "0x0109c215b380f6A87aF0b4d76e60a86451f2A5fb"
+Uploaded contract: MapFactory: "0x4DDAEdAA2A245e4d08301e86368c0E179B37909e"
+Uploaded contract: OICashFactory: "0x81947Ef65492e219fdCCFE1E215a52F3c9C7047d"
+Uploaded contract: MarketFactory: "0xA58514c8109cEDec2707eB21f7cC34Ba7435D2EF"
+Uploaded contract: DisputeWindowFactory: "0x2ecE576E5f64896859Ad25F42F833FA4d54c3B9F"
+Uploaded contract: InitialReporterFactory: "0xEe55a721dbf33C88E25D49d14fd80B55374B3dB9"
+Uploaded contract: DisputeCrowdsourcerFactory: "0x18A3F06Ae4C574652E7E68d2716d34eEd578657F"
+Uploaded contract: ZeroXExchange: "0x943eC19a2b7C9691C52713Fd2a3b31B83fAAbd26"
+Uploaded contract: ShareTokenFactory: "0x5DD1743E33C8b9Cd6569541B9Eac01795052A8FB"
+Uploaded contract: TestNetReputationTokenFactory: "0x0EfF6553c0B1c783E91D0419B0866013Ca9a114c"
+Uploaded contract: Map: "0x21fE87E4f5cA7b640707316f2E6664E452A98cd7"
+Uploaded contract: UniverseFactory: "0xda0f30180c2B7dF28EB406806DD5a65B9526C178"
+Uploaded contract: DisputeCrowdsourcer: "0xBe2b0F381F14910141626dc380cf74C7712649AF"
+Uploaded contract: DisputeWindow: "0x598dAEc1a0c219c338F30A3ccE2374143738Bdfd"
+Uploaded contract: InitialReporter: "0xe82A936AeBBB381f4614B6E3cbaEE86E456bF5e2"
+Uploaded contract: CancelOrder: "0xAC6fDBB2507777B06Ec08ca51305c571F6371991"
+Uploaded contract: Market: "0x9586D7a7f4D30E30Ac23f3a2C9AaceC9EB865FaF"
+Uploaded contract: Reporting: "0xCdfF1FADD0BF67c4AE9e4a41d3b24892A92337eE"
+Uploaded contract: CreateOrder: "0x88f31C99E1C687fF1BDE3Ec947C437a50fF9c692"
+Uploaded contract: CompleteSets: "0x92D5005175f79D6B6EaaE34D76BcCbF94d1614A4"
+Uploaded contract: ClaimTradingProceeds: "0x4DDf987D6c086E8cb42C4AbFB5B4DaA422F814DB"
+Uploaded contract: FillOrder: "0x4821dE86ef3D3B6fDDE3a1C44bE9b67b409E06d2"
+Uploaded contract: OICash: "0x732cC0AD4Eed90cf71B6D94b128B949c4ec4d089"
+Uploaded contract: Orders: "0xc053Bc12959AFb0E6FEc4c62cf724db0B2E96449"
+Uploaded contract: ProfitLoss: "0x73c6CF13047b2E3c5433d97e8F0339d85aA53C42"
+Uploaded contract: ShareToken: "0xb7BfC27bBc814fDe0a6A18Ddd8Ac9656Ea62fE42"
+Uploaded contract: SimulateTrade: "0xbe56F6EFc0f61f3d6237a044828E439144260f9C"
+Uploaded contract: RedeemStake: "0x68eb7E1339b79abfb38cc0bA7dFfD6867e5B19c5"
+Uploaded contract: ZeroXTradeToken: "0x3F904AAF6687213A6cF7cA0d5554EAC8cE4E0e04"
+Uploaded contract: Trade: "0x4042c1D46d1e268af197062EBE1491E61793523c"
+Uploaded contract: Formulas: "0x295f2E4817Ffe332d373B6575a89B4958FC82eEf"
+Uploading Test Dai Contracts
+Upload contract: Cash
+Uploaded contract: Cash: "0xFBEa5b9af38f3954c96c97Df94844c0319dF0fdc"
+Upload contract: TestNetDaiVat
+Uploaded contract: TestNetDaiVat: "0x55A757b7736202C343CFD6eC2B8961A1Cb1D921B"
+Upload contract: TestNetDaiPot
+Uploaded contract: TestNetDaiPot: "0x233f26C8BCAAcb8513BF5467Bd0D9a0c364eA5b3"
+Upload contract: TestNetDaiJoin
+Uploaded contract: TestNetDaiJoin: "0x4e6dDe9fd04060e8964A431920bA33bA5130fF42"
+Uploading Gnosis Contracts
+Upload contract: ProxyFactory
+Uploaded contract: ProxyFactory: "0xF4a23b54fa7dBC4d4C2311dDc9810CBD685b8057"
+Upload contract: GnosisSafe
+Uploaded contract: GnosisSafe: "0xeB0e30D3e87c037Ac6f16d8eB8a5753d860bEd54"
+Uploading 0x Contracts
+Upload contract: ZeroXExchange
+Uploaded contract: ZeroXExchange: "0x08297422fc6Eb7D8046fe88c81D289bC2644074C"
+Initializing contracts...
+Initializing legacy REP
+Initializing Cash
+Creating genesis universe...
+Genesis universe address: 0xd8534c9DBb4DB148b4451CF36a738cFcb1Cc3Bcc
+Migrating from legacy REP
+Deployment to all networks succeeded
+Done in 199.41s.
