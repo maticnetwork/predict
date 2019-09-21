@@ -1,7 +1,6 @@
 const abis = require('./AugurContracts/abi.json')
 let addresses = require('./AugurContracts/addresses2.json')
-// let addresses = require('./AugurContracts/addresses.json')
-// addresses = addresses['103']
+// let addresses = require('./AugurContracts/addresses.json')['103']
 
 class AugurHelper {
   getAugur() {

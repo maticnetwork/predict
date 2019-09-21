@@ -1,6 +1,7 @@
 // const PredictPredicate = artifacts.require('PredictPredicate')
 const augurHelper = require('./helpers/AugurHelper.js')
 const abis = require('./helpers/AugurContracts/abi.json')
+// let addresses = require('./helpers//AugurContracts/addresses.json')['103']
 let addresses = require('./helpers/AugurContracts/addresses2.json')
 
 const nullAddress = "0x0000000000000000000000000000000000000000"
@@ -14,24 +15,30 @@ contract('PredictPredicate', async function(accounts) {
 
   it.only('createYesNoMarket', async function() {
     const universe = augurHelper.getUniverse()
+    const repBond = await universe.methods.getOrCacheMarketRepBond().call()
+    console.log('getOrCacheMarketRepBond', repBond)
     const repAddress = await universe.methods.getReputationToken().call({ from: accounts[0] })
-    const repTransfer = await (new web3.eth.Contract(abis.TestNetReputationToken, repAddress)).methods.faucet(0).send({ from })
-    // '0x' + web3.utils.toBN(10).pow(web3.utils.toBN(18)).toString(16)
+    const repContract = new web3.eth.Contract(abis.TestNetReputationToken, repAddress)
+    const repTransfer = await repContract.methods.faucet(0).send({ from })
+    console.log('rep balance', await repContract.methods.balanceOf(from).call())
+    // console.log('rep approve', await repContract.approve(addresses.Universe, repBond).send({ from }))
+    // // '0x' + web3.utils.toBN(10).pow(web3.utils.toBN(18)).toString(16)
     const amount = await universe.methods.getOrCacheValidityBond().call()
     const cash = (new web3.eth.Contract(abis.Cash, addresses.Cash)).methods
     await cash.faucet(amount).send({ from })
-    await cash.approve(addresses.Augur, amount).send({ from })
-    const createMarket = await universe.methods.createYesNoMarket(1568197952, 0, 0, accounts[0], '').send({ from })
+    console.log('getOrCacheValidityBond', amount, 'cash balance', await cash.balanceOf(from).call())
+    console.log(await cash.approve(addresses.Augur, amount).send({ from }))
+    const createMarket = await universe.methods.createYesNoMarket(1577788352, 0, 0, accounts[0], '').send({ from })
     console.log(createMarket)
   })
 
-  it.only('trades', async function() {
+  it('trades', async function() {
     const augur = augurHelper.getAugur()
     const universe = augurHelper.getUniverse()
     const repAddress = await universe.methods.getReputationToken().call({ from: accounts[0] })
     const repTransfer = await (new web3.eth.Contract(abis.TestNetReputationToken, repAddress)).methods.faucet(0).send({ from })
     // '0x' + web3.utils.toBN(10).pow(web3.utils.toBN(18)).toString(16)
-    const amount = await universe.methods.getOrCacheValidityBond().call()
+    let amount = await universe.methods.getOrCacheValidityBond().call()
     const cash = (new web3.eth.Contract(abis.Cash, addresses.Cash)).methods
     await cash.faucet(amount).send({ from })
     await cash.approve(addresses.Augur, amount).send({ from })
@@ -47,10 +54,10 @@ contract('PredictPredicate', async function(accounts) {
     // Zero X trading happens through the ZeroXTrade contract
     const zeroXTrade = augurHelper.getZeroXTrade()
     // Make an order for 1000 attoShares
-    const amount = 1000
+    amount = 1000
     // price 60 in a standard market means 60 cents
     const price = 60
-    // No affiliate specified 
+    // No affiliate specified
     const affiliateAddress = nullAddress
     const tradeGroupId = augurHelper.stringTo32ByteHex('42')
     // 1 == YES
