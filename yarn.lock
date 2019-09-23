@@ -1665,9 +1665,9 @@ make-dir@^1.0.0:
   dependencies:
     pify "^3.0.0"
 
-"matic-protocol@github:maticnetwork/contracts":
+"matic-protocol@github:maticnetwork/contracts#0b6e49ab227e9dbaf4d851a722a6a7a84be7ac62":
   version "1.0.0"
-  resolved "https://codeload.github.com/maticnetwork/contracts/tar.gz/86cd1867e80bc6dea6bd2875b7a61327595e3322"
+  resolved "https://codeload.github.com/maticnetwork/contracts/tar.gz/0b6e49ab227e9dbaf4d851a722a6a7a84be7ac62"
   dependencies:
     eth-sig-util "2.1.0"
     ethereumjs-abi "^0.6.5"
@@ -2463,7 +2463,7 @@ simple-get@^2.7.0:
     once "^1.3.1"
     simple-concat "^1.0.0"
 
-solidity-rlp@^2.0.0:
+solidity-rlp@^2.0.0, solidity-rlp@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/solidity-rlp/-/solidity-rlp-2.0.1.tgz#7cd846c3903a0ade5e0932133b1661108cdcab1d"
   integrity sha512-zBCnThsO5x3JI4ZPUUnrx0MK2zGxhaxfwiZ3Wwm8lJ+v12WTJjUW9k+lVT5H06AhgHNbxDahEg8CIQvEl1vPLQ==
@@ -3042,7 +3042,7 @@ web3-utils@1.2.1:
     underscore "1.9.1"
     utf8 "3.0.0"
 
-web3@1.2.1:
+web3@1.2.1, web3@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/web3/-/web3-1.2.1.tgz#5d8158bcca47838ab8c2b784a2dee4c3ceb4179b"
   integrity sha512-nNMzeCK0agb5i/oTWNdQ1aGtwYfXzHottFP2Dz0oGIzavPMGSKyVlr8ibVb1yK5sJBjrWVnTdGaOC2zKDFuFRw==
