@@ -19,6 +19,7 @@
   "homepage": "https://github.com/maticnetwork/predict#readme",
   "dependencies": {
     "@openzeppelin/contracts": "^2.3.0",
+    "0x.js": "7.0.2",
     "matic-protocol": "github:maticnetwork/contracts#0b6e49ab227e9dbaf4d851a722a6a7a84be7ac62",
     "solidity-rlp": "^2.0.1",
     "web3": "^1.2.1"
