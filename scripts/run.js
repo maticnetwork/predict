@@ -1,7 +1,8 @@
 var Web3 = require('web3');
 var web3 = new Web3('ws://localhost:8546');
 const abis = require('../test/helpers/AugurContracts/abi.json')
-let addresses = require('../test/helpers/AugurContracts/addresses2.json')
+let addresses = require('../test/helpers/AugurContracts/addresses.json')['103']
+// let addresses = require('../test/helpers/AugurContracts/addresses2.json')
 const augurHelper = require('../test/helpers/AugurHelper.js')
 const { signatureUtils } = require("0x.js")
 
@@ -100,7 +101,8 @@ async function run() {
   const trade = zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, orders, signatures);
   const amountRemaining = await trade.call({ from: otherAccount, gas: 2000000 });
   console.log(`Amount remaining from fill: ${amountRemaining}`);
-  await trade.send({ from: otherAccount, gas: 2000000 })
+  const tradeTx = await trade.send({ from: otherAccount, gas: 2000000 })
+  console.log('tradeTx', tradeTx)
 
   const newFromBalance = await cash.balanceOf(from).call();
   const newOtherBalance = await cash.balanceOf(otherAccount).call();

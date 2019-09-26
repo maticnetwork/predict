@@ -1,8 +1,8 @@
 var Web3 = require('web3');
 var web3 = new Web3('ws://localhost:8546');
 const abis = require('./AugurContracts/abi.json')
-let addresses = require('./AugurContracts/addresses2.json')
-// let addresses = require('./AugurContracts/addresses.json')['103']
+// let addresses = require('./AugurContracts/addresses2.json')
+let addresses = require('./AugurContracts/addresses.json')['103']
 
 class AugurHelper {
   getAugur() {
