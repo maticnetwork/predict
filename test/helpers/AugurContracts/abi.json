@@ -368,23 +368,39 @@
 					"type": "address"
 				},
 				{
+					"name": "_reporter",
+					"type": "address"
+				},
+				{
 					"name": "_market",
 					"type": "address"
 				},
 				{
-					"name": "_disputeCrowdsourcer",
-					"type": "address"
+					"name": "_amountStaked",
+					"type": "uint256"
+				},
+				{
+					"name": "_isDesignatedReporter",
+					"type": "bool"
 				},
 				{
 					"name": "_payoutNumerators",
 					"type": "uint256[]"
 				},
 				{
-					"name": "_size",
+					"name": "_description",
+					"type": "string"
+				},
+				{
+					"name": "_nextWindowStartTime",
+					"type": "uint256"
+				},
+				{
+					"name": "_nextWindowEndTime",
 					"type": "uint256"
 				}
 			],
-			"name": "disputeCrowdsourcerCreated",
+			"name": "logInitialReportSubmitted",
 			"outputs": [
 				{
 					"name": "",
@@ -673,10 +689,6 @@
 					"type": "address"
 				},
 				{
-					"name": "_reporter",
-					"type": "address"
-				},
-				{
 					"name": "_market",
 					"type": "address"
 				},
@@ -685,15 +697,19 @@
 					"type": "address"
 				},
 				{
-					"name": "_amountStaked",
+					"name": "_payoutNumerators",
+					"type": "uint256[]"
+				},
+				{
+					"name": "_size",
 					"type": "uint256"
 				},
 				{
-					"name": "_description",
-					"type": "string"
+					"name": "_disputeRound",
+					"type": "uint256"
 				}
 			],
-			"name": "logDisputeCrowdsourcerContribution",
+			"name": "disputeCrowdsourcerCreated",
 			"outputs": [
 				{
 					"name": "",
@@ -778,6 +794,116 @@
 				{
 					"name": "_market",
 					"type": "address"
+				},
+				{
+					"name": "_disputeCrowdsourcer",
+					"type": "address"
+				},
+				{
+					"name": "_payoutNumerators",
+					"type": "uint256[]"
+				},
+				{
+					"name": "_nextWindowStartTime",
+					"type": "uint256"
+				},
+				{
+					"name": "_nextWindowEndTime",
+					"type": "uint256"
+				},
+				{
+					"name": "_pacingOn",
+					"type": "bool"
+				},
+				{
+					"name": "_totalRepStakedInPayout",
+					"type": "uint256"
+				},
+				{
+					"name": "_totalRepStakedInMarket",
+					"type": "uint256"
+				},
+				{
+					"name": "_disputeRound",
+					"type": "uint256"
+				}
+			],
+			"name": "logDisputeCrowdsourcerCompleted",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_universe",
+					"type": "address"
+				},
+				{
+					"name": "_reporter",
+					"type": "address"
+				},
+				{
+					"name": "_market",
+					"type": "address"
+				},
+				{
+					"name": "_disputeCrowdsourcer",
+					"type": "address"
+				},
+				{
+					"name": "_amountStaked",
+					"type": "uint256"
+				},
+				{
+					"name": "_description",
+					"type": "string"
+				},
+				{
+					"name": "_payoutNumerators",
+					"type": "uint256[]"
+				},
+				{
+					"name": "_currentStake",
+					"type": "uint256"
+				},
+				{
+					"name": "_stakeRemaining",
+					"type": "uint256"
+				},
+				{
+					"name": "_disputeRound",
+					"type": "uint256"
+				}
+			],
+			"name": "logDisputeCrowdsourcerContribution",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_universe",
+					"type": "address"
+				},
+				{
+					"name": "_market",
+					"type": "address"
 				}
 			],
 			"name": "logMarketOIChanged",
@@ -815,7 +941,7 @@
 					"type": "address"
 				},
 				{
-					"name": "_feeDivisor",
+					"name": "_feePerCashInAttoCash",
 					"type": "uint256"
 				},
 				{
@@ -997,57 +1123,6 @@
 					"type": "address"
 				},
 				{
-					"name": "_shareToken",
-					"type": "address"
-				},
-				{
-					"name": "_sender",
-					"type": "address"
-				},
-				{
-					"name": "_market",
-					"type": "address"
-				},
-				{
-					"name": "_outcome",
-					"type": "uint256"
-				},
-				{
-					"name": "_numShares",
-					"type": "uint256"
-				},
-				{
-					"name": "_numPayoutTokens",
-					"type": "uint256"
-				},
-				{
-					"name": "_finalTokenBalance",
-					"type": "uint256"
-				},
-				{
-					"name": "_fees",
-					"type": "uint256"
-				}
-			],
-			"name": "logTradingProceedsClaimed",
-			"outputs": [
-				{
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"payable": false,
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"constant": false,
-			"inputs": [
-				{
-					"name": "_universe",
-					"type": "address"
-				},
-				{
 					"name": "_target",
 					"type": "address"
 				},
@@ -1168,49 +1243,6 @@
 		},
 		{
 			"constant": false,
-			"inputs": [
-				{
-					"name": "_universe",
-					"type": "address"
-				},
-				{
-					"name": "_reporter",
-					"type": "address"
-				},
-				{
-					"name": "_market",
-					"type": "address"
-				},
-				{
-					"name": "_amountStaked",
-					"type": "uint256"
-				},
-				{
-					"name": "_isDesignatedReporter",
-					"type": "bool"
-				},
-				{
-					"name": "_payoutNumerators",
-					"type": "uint256[]"
-				},
-				{
-					"name": "_description",
-					"type": "string"
-				}
-			],
-			"name": "logInitialReportSubmitted",
-			"outputs": [
-				{
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"payable": false,
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"constant": false,
 			"inputs": [],
 			"name": "createGenesisUniverse",
 			"outputs": [
@@ -1271,6 +1303,53 @@
 				}
 			],
 			"name": "logParticipationTokensRedeemed",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_universe",
+					"type": "address"
+				},
+				{
+					"name": "_shareToken",
+					"type": "address"
+				},
+				{
+					"name": "_sender",
+					"type": "address"
+				},
+				{
+					"name": "_market",
+					"type": "address"
+				},
+				{
+					"name": "_outcome",
+					"type": "uint256"
+				},
+				{
+					"name": "_numShares",
+					"type": "uint256"
+				},
+				{
+					"name": "_numPayoutTokens",
+					"type": "uint256"
+				},
+				{
+					"name": "_fees",
+					"type": "uint256"
+				}
+			],
+			"name": "logTradingProceedsClaimed",
 			"outputs": [
 				{
 					"name": "",
@@ -1393,41 +1472,6 @@
 			"constant": false,
 			"inputs": [
 				{
-					"name": "_universe",
-					"type": "address"
-				},
-				{
-					"name": "_market",
-					"type": "address"
-				},
-				{
-					"name": "_disputeCrowdsourcer",
-					"type": "address"
-				},
-				{
-					"name": "_nextWindowStartTime",
-					"type": "uint256"
-				},
-				{
-					"name": "_pacingOn",
-					"type": "bool"
-				}
-			],
-			"name": "logDisputeCrowdsourcerCompleted",
-			"outputs": [
-				{
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"payable": false,
-			"stateMutability": "nonpayable",
-			"type": "function"
-		},
-		{
-			"constant": false,
-			"inputs": [
-				{
 					"name": "_newTimestamp",
 					"type": "uint256"
 				}
@@ -1506,7 +1550,7 @@
 					"type": "address"
 				},
 				{
-					"name": "_feeDivisor",
+					"name": "_feePerCashInAttoCash",
 					"type": "uint256"
 				}
 			],
@@ -1749,7 +1793,7 @@
 					"type": "address"
 				},
 				{
-					"name": "_feeDivisor",
+					"name": "_feePerCashInAttoCash",
 					"type": "uint256"
 				},
 				{
@@ -1828,7 +1872,7 @@
 				},
 				{
 					"indexed": false,
-					"name": "feeDivisor",
+					"name": "feePerCashInAttoCash",
 					"type": "uint256"
 				},
 				{
@@ -1850,6 +1894,11 @@
 					"indexed": false,
 					"name": "outcomes",
 					"type": "bytes32[]"
+				},
+				{
+					"indexed": false,
+					"name": "noShowBond",
+					"type": "uint256"
 				},
 				{
 					"indexed": false,
@@ -1900,6 +1949,16 @@
 				},
 				{
 					"indexed": false,
+					"name": "nextWindowStartTime",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "nextWindowEndTime",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
 					"name": "timestamp",
 					"type": "uint256"
 				}
@@ -1933,6 +1992,11 @@
 				{
 					"indexed": false,
 					"name": "size",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "disputeRound",
 					"type": "uint256"
 				}
 			],
@@ -1974,6 +2038,26 @@
 				},
 				{
 					"indexed": false,
+					"name": "payoutNumerators",
+					"type": "uint256[]"
+				},
+				{
+					"indexed": false,
+					"name": "currentStake",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "stakeRemaining",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "disputeRound",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
 					"name": "timestamp",
 					"type": "uint256"
 				}
@@ -2001,13 +2085,38 @@
 				},
 				{
 					"indexed": false,
+					"name": "payoutNumerators",
+					"type": "uint256[]"
+				},
+				{
+					"indexed": false,
 					"name": "nextWindowStartTime",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "nextWindowEndTime",
 					"type": "uint256"
 				},
 				{
 					"indexed": false,
 					"name": "pacingOn",
 					"type": "bool"
+				},
+				{
+					"indexed": false,
+					"name": "totalRepStakedInPayout",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "totalRepStakedInMarket",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "disputeRound",
+					"type": "uint256"
 				}
 			],
 			"name": "DisputeCrowdsourcerCompleted",
@@ -2029,6 +2138,11 @@
 				{
 					"indexed": true,
 					"name": "market",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"name": "initialReporter",
 					"type": "address"
 				},
 				{
@@ -2224,6 +2338,11 @@
 					"indexed": false,
 					"name": "payoutNumerators",
 					"type": "uint256[]"
+				},
+				{
+					"indexed": false,
+					"name": "creationTimestamp",
+					"type": "uint256"
 				}
 			],
 			"name": "UniverseCreated",
@@ -2381,11 +2500,6 @@
 				{
 					"indexed": false,
 					"name": "numPayoutTokens",
-					"type": "uint256"
-				},
-				{
-					"indexed": false,
-					"name": "finalTokenBalance",
 					"type": "uint256"
 				},
 				{
@@ -8020,6 +8134,20 @@
 	"ZeroXExchange": [
 		{
 			"constant": true,
+			"inputs": [],
+			"name": "ERC1155_PROXY_ID",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bytes4"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
 			"inputs": [
 				{
 					"name": "",
@@ -8197,19 +8325,23 @@
 			"constant": true,
 			"inputs": [
 				{
-					"name": "assetData",
+					"name": "b",
 					"type": "bytes"
-				}
-			],
-			"name": "decodeERC20AssetData",
-			"outputs": [
-				{
-					"name": "assetProxyId",
-					"type": "bytes4"
 				},
 				{
-					"name": "tokenAddress",
-					"type": "address"
+					"name": "from",
+					"type": "uint256"
+				},
+				{
+					"name": "to",
+					"type": "uint256"
+				}
+			],
+			"name": "sliceDestructive",
+			"outputs": [
+				{
+					"name": "result",
+					"type": "bytes"
 				}
 			],
 			"payable": false,
@@ -8241,6 +8373,41 @@
 			],
 			"payable": false,
 			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "assetData",
+					"type": "bytes"
+				}
+			],
+			"name": "decodeERC1155AssetData",
+			"outputs": [
+				{
+					"name": "assetProxyId",
+					"type": "bytes4"
+				},
+				{
+					"name": "tokenAddress",
+					"type": "address"
+				},
+				{
+					"name": "tokenIds",
+					"type": "uint256[]"
+				},
+				{
+					"name": "tokenValues",
+					"type": "uint256[]"
+				},
+				{
+					"name": "callbackData",
+					"type": "bytes"
+				}
+			],
+			"payable": false,
+			"stateMutability": "pure",
 			"type": "function"
 		},
 		{
@@ -8788,6 +8955,27 @@
 				}
 			],
 			"name": "createUniverse",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	],
+	"ZeroXTradeTokenFactory": [
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_augur",
+					"type": "address"
+				}
+			],
+			"name": "createZeroXTradeToken",
 			"outputs": [
 				{
 					"name": "",
@@ -10068,6 +10256,20 @@
 		{
 			"constant": true,
 			"inputs": [],
+			"name": "buyParticipationTokens",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
 			"name": "granularity",
 			"outputs": [
 				{
@@ -10303,6 +10505,29 @@
 			],
 			"payable": false,
 			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_buyer",
+					"type": "address"
+				},
+				{
+					"name": "_attotokens",
+					"type": "uint256"
+				}
+			],
+			"name": "trustedBuy",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
 			"type": "function"
 		},
 		{
@@ -11439,6 +11664,20 @@
 		{
 			"constant": true,
 			"inputs": [],
+			"name": "getZeroXTradeToken",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
 			"name": "getEndTime",
 			"outputs": [
 				{
@@ -11614,6 +11853,20 @@
 			"constant": true,
 			"inputs": [],
 			"name": "getWinningReportingParticipant",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "zeroXTradeToken",
 			"outputs": [
 				{
 					"name": "",
@@ -13383,6 +13636,25 @@
 			],
 			"payable": false,
 			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "_address",
+					"type": "address"
+				}
+			],
+			"name": "isOpenInterestCash",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
 			"type": "function"
 		},
 		{
@@ -15195,20 +15467,6 @@
 		{
 			"constant": true,
 			"inputs": [],
-			"name": "zeroXTradeToken",
-			"outputs": [
-				{
-					"name": "",
-					"type": "address"
-				}
-			],
-			"payable": false,
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"constant": true,
-			"inputs": [],
 			"name": "augur",
 			"outputs": [
 				{
@@ -15340,6 +15598,20 @@
 			"outputs": [],
 			"payable": false,
 			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "ZeroXTrade",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
 			"type": "function"
 		},
 		{
@@ -15498,20 +15770,6 @@
 		{
 			"constant": true,
 			"inputs": [],
-			"name": "zeroXTradeToken",
-			"outputs": [
-				{
-					"name": "",
-					"type": "address"
-				}
-			],
-			"payable": false,
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"constant": true,
-			"inputs": [],
 			"name": "augur",
 			"outputs": [
 				{
@@ -15580,6 +15838,20 @@
 			"outputs": [],
 			"payable": false,
 			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "ZeroXTrade",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
 			"type": "function"
 		},
 		{
@@ -15775,6 +16047,29 @@
 			"type": "function"
 		},
 		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_market",
+					"type": "address"
+				},
+				{
+					"name": "_amount",
+					"type": "uint256"
+				}
+			],
+			"name": "buyCompleteSets",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
 			"constant": true,
 			"inputs": [],
 			"name": "universe",
@@ -15891,6 +16186,20 @@
 		{
 			"constant": true,
 			"inputs": [],
+			"name": "augur",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
 			"name": "totalAmountFeesPaid",
 			"outputs": [
 				{
@@ -15920,6 +16229,20 @@
 			"constant": true,
 			"inputs": [],
 			"name": "cash",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "completeSets",
 			"outputs": [
 				{
 					"name": "",
@@ -17305,6 +17628,33 @@
 			"type": "function"
 		},
 		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_market",
+					"type": "address"
+				},
+				{
+					"name": "_account",
+					"type": "address"
+				},
+				{
+					"name": "_outcomeFees",
+					"type": "uint256[]"
+				}
+			],
+			"name": "recordClaim",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
 			"constant": true,
 			"inputs": [],
 			"name": "orders",
@@ -17316,6 +17666,37 @@
 			],
 			"payable": false,
 			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_market",
+					"type": "address"
+				},
+				{
+					"name": "_trader",
+					"type": "address"
+				},
+				{
+					"name": "_outcome",
+					"type": "uint256"
+				},
+				{
+					"name": "_fees",
+					"type": "uint256"
+				}
+			],
+			"name": "adjustTraderProfitForFees",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
 			"type": "function"
 		},
 		{
@@ -17357,29 +17738,6 @@
 			],
 			"payable": false,
 			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"constant": false,
-			"inputs": [
-				{
-					"name": "_market",
-					"type": "address"
-				},
-				{
-					"name": "_account",
-					"type": "address"
-				}
-			],
-			"name": "recordClaim",
-			"outputs": [
-				{
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"payable": false,
-			"stateMutability": "nonpayable",
 			"type": "function"
 		},
 		{
@@ -18517,6 +18875,99 @@
 			"constant": true,
 			"inputs": [
 				{
+					"components": [
+						{
+							"name": "makerAddress",
+							"type": "address"
+						},
+						{
+							"name": "takerAddress",
+							"type": "address"
+						},
+						{
+							"name": "feeRecipientAddress",
+							"type": "address"
+						},
+						{
+							"name": "senderAddress",
+							"type": "address"
+						},
+						{
+							"name": "makerAssetAmount",
+							"type": "uint256"
+						},
+						{
+							"name": "takerAssetAmount",
+							"type": "uint256"
+						},
+						{
+							"name": "makerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "takerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "expirationTimeSeconds",
+							"type": "uint256"
+						},
+						{
+							"name": "salt",
+							"type": "uint256"
+						},
+						{
+							"name": "makerAssetData",
+							"type": "bytes"
+						},
+						{
+							"name": "takerAssetData",
+							"type": "bytes"
+						}
+					],
+					"name": "_orders",
+					"type": "tuple[]"
+				},
+				{
+					"name": "_amount",
+					"type": "uint256"
+				},
+				{
+					"name": "_fillOnly",
+					"type": "bool"
+				}
+			],
+			"name": "simulateZeroXTrade",
+			"outputs": [
+				{
+					"name": "_sharesFilled",
+					"type": "uint256"
+				},
+				{
+					"name": "_tokensDepleted",
+					"type": "uint256"
+				},
+				{
+					"name": "_sharesDepleted",
+					"type": "uint256"
+				},
+				{
+					"name": "_settlementFees",
+					"type": "uint256"
+				},
+				{
+					"name": "_numFills",
+					"type": "uint256"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
 					"name": "_direction",
 					"type": "uint8"
 				},
@@ -18870,7 +19321,7 @@
 			"type": "function"
 		}
 	],
-	"ZeroXTradeToken": [
+	"ZeroXTrade": [
 		{
 			"constant": false,
 			"inputs": [
@@ -18958,21 +19409,8 @@
 		},
 		{
 			"constant": true,
-			"inputs": [
-				{
-					"name": "",
-					"type": "address"
-				},
-				{
-					"name": "",
-					"type": "address"
-				},
-				{
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"name": "transferFrom",
+			"inputs": [],
+			"name": "getTransferFromAllowed",
 			"outputs": [
 				{
 					"name": "",
@@ -18987,41 +19425,103 @@
 			"constant": true,
 			"inputs": [
 				{
-					"name": "_assetData",
-					"type": "bytes"
+					"name": "_price",
+					"type": "uint256"
+				},
+				{
+					"name": "_outcome",
+					"type": "uint8"
+				},
+				{
+					"name": "_type",
+					"type": "uint8"
 				}
 			],
-			"name": "parseAssetData",
+			"name": "getTokenId",
 			"outputs": [
 				{
-					"components": [
-						{
-							"name": "marketAddress",
-							"type": "address"
-						},
-						{
-							"name": "price",
-							"type": "uint256"
-						},
-						{
-							"name": "outcome",
-							"type": "uint8"
-						},
-						{
-							"name": "orderType",
-							"type": "uint8"
-						},
-						{
-							"name": "kycToken",
-							"type": "address"
-						}
-					],
-					"name": "_data",
-					"type": "tuple"
+					"name": "_tokenId",
+					"type": "uint256"
 				}
 			],
 			"payable": false,
 			"stateMutability": "pure",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "ERC1155_PROXY_ID",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bytes4"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "_tokenId",
+					"type": "uint256"
+				}
+			],
+			"name": "unpackTokenId",
+			"outputs": [
+				{
+					"name": "_price",
+					"type": "uint256"
+				},
+				{
+					"name": "_outcome",
+					"type": "uint8"
+				},
+				{
+					"name": "_type",
+					"type": "uint8"
+				}
+			],
+			"payable": false,
+			"stateMutability": "pure",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "_market",
+					"type": "address"
+				},
+				{
+					"name": "_price",
+					"type": "uint256"
+				},
+				{
+					"name": "_outcome",
+					"type": "uint8"
+				},
+				{
+					"name": "_type",
+					"type": "uint8"
+				},
+				{
+					"name": "_kycToken",
+					"type": "address"
+				}
+			],
+			"name": "encodeAssetData",
+			"outputs": [
+				{
+					"name": "_assetData",
+					"type": "bytes"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
 			"type": "function"
 		},
 		{
@@ -19056,34 +19556,184 @@
 			"constant": true,
 			"inputs": [
 				{
+					"name": "_assetData",
+					"type": "bytes"
+				}
+			],
+			"name": "decodeAssetData",
+			"outputs": [
+				{
+					"name": "_assetProxyId",
+					"type": "bytes4"
+				},
+				{
+					"name": "_tokenAddress",
+					"type": "address"
+				},
+				{
+					"name": "_tokenIds",
+					"type": "uint256[]"
+				},
+				{
+					"name": "_tokenValues",
+					"type": "uint256[]"
+				},
+				{
+					"name": "_callbackData",
+					"type": "bytes"
+				},
+				{
+					"name": "_kycToken",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "pure",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "cash",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
 					"components": [
 						{
-							"name": "marketAddress",
+							"name": "makerAddress",
 							"type": "address"
 						},
 						{
-							"name": "price",
+							"name": "takerAddress",
+							"type": "address"
+						},
+						{
+							"name": "feeRecipientAddress",
+							"type": "address"
+						},
+						{
+							"name": "senderAddress",
+							"type": "address"
+						},
+						{
+							"name": "makerAssetAmount",
 							"type": "uint256"
 						},
 						{
-							"name": "outcome",
-							"type": "uint8"
+							"name": "takerAssetAmount",
+							"type": "uint256"
 						},
 						{
-							"name": "orderType",
-							"type": "uint8"
+							"name": "makerFee",
+							"type": "uint256"
 						},
 						{
-							"name": "kycToken",
-							"type": "address"
+							"name": "takerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "expirationTimeSeconds",
+							"type": "uint256"
+						},
+						{
+							"name": "salt",
+							"type": "uint256"
+						},
+						{
+							"name": "makerAssetData",
+							"type": "bytes"
+						},
+						{
+							"name": "takerAssetData",
+							"type": "bytes"
 						}
 					],
-					"name": "_augurOrderData",
+					"name": "_order",
 					"type": "tuple"
+				}
+			],
+			"name": "getZeroXTradeTokenData",
+			"outputs": [
+				{
+					"name": "_token",
+					"type": "address"
 				},
 				{
-					"name": "_creator",
-					"type": "address"
+					"name": "_tokenId",
+					"type": "uint256"
+				}
+			],
+			"payable": false,
+			"stateMutability": "pure",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"components": [
+						{
+							"name": "makerAddress",
+							"type": "address"
+						},
+						{
+							"name": "takerAddress",
+							"type": "address"
+						},
+						{
+							"name": "feeRecipientAddress",
+							"type": "address"
+						},
+						{
+							"name": "senderAddress",
+							"type": "address"
+						},
+						{
+							"name": "makerAssetAmount",
+							"type": "uint256"
+						},
+						{
+							"name": "takerAssetAmount",
+							"type": "uint256"
+						},
+						{
+							"name": "makerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "takerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "expirationTimeSeconds",
+							"type": "uint256"
+						},
+						{
+							"name": "salt",
+							"type": "uint256"
+						},
+						{
+							"name": "makerAssetData",
+							"type": "bytes"
+						},
+						{
+							"name": "takerAssetData",
+							"type": "bytes"
+						}
+					],
+					"name": "_order",
+					"type": "tuple"
 				},
 				{
 					"name": "_amount",
@@ -19095,20 +19745,6 @@
 				{
 					"name": "",
 					"type": "bool"
-				}
-			],
-			"payable": false,
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"constant": true,
-			"inputs": [],
-			"name": "cash",
-			"outputs": [
-				{
-					"name": "",
-					"type": "address"
 				}
 			],
 			"payable": false,
@@ -19151,6 +19787,97 @@
 				{
 					"name": "",
 					"type": "bytes32"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"components": [
+						{
+							"name": "makerAddress",
+							"type": "address"
+						},
+						{
+							"name": "takerAddress",
+							"type": "address"
+						},
+						{
+							"name": "feeRecipientAddress",
+							"type": "address"
+						},
+						{
+							"name": "senderAddress",
+							"type": "address"
+						},
+						{
+							"name": "makerAssetAmount",
+							"type": "uint256"
+						},
+						{
+							"name": "takerAssetAmount",
+							"type": "uint256"
+						},
+						{
+							"name": "makerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "takerFee",
+							"type": "uint256"
+						},
+						{
+							"name": "expirationTimeSeconds",
+							"type": "uint256"
+						},
+						{
+							"name": "salt",
+							"type": "uint256"
+						},
+						{
+							"name": "makerAssetData",
+							"type": "bytes"
+						},
+						{
+							"name": "takerAssetData",
+							"type": "bytes"
+						}
+					],
+					"name": "_order",
+					"type": "tuple"
+				}
+			],
+			"name": "parseOrderData",
+			"outputs": [
+				{
+					"components": [
+						{
+							"name": "marketAddress",
+							"type": "address"
+						},
+						{
+							"name": "price",
+							"type": "uint256"
+						},
+						{
+							"name": "outcome",
+							"type": "uint8"
+						},
+						{
+							"name": "orderType",
+							"type": "uint8"
+						},
+						{
+							"name": "kycToken",
+							"type": "address"
+						}
+					],
+					"name": "_data",
+					"type": "tuple"
 				}
 			],
 			"payable": false,
@@ -19270,6 +19997,371 @@
 			],
 			"payable": false,
 			"stateMutability": "view",
+			"type": "function"
+		}
+	],
+	"ZeroXTradeToken": [
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "owner",
+					"type": "address"
+				},
+				{
+					"name": "id",
+					"type": "uint256"
+				}
+			],
+			"name": "balanceOf",
+			"outputs": [
+				{
+					"name": "",
+					"type": "uint256"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "zeroXTrade",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "from",
+					"type": "address"
+				},
+				{
+					"name": "to",
+					"type": "address"
+				},
+				{
+					"name": "ids",
+					"type": "uint256[]"
+				},
+				{
+					"name": "values",
+					"type": "uint256[]"
+				},
+				{
+					"name": "data",
+					"type": "bytes"
+				}
+			],
+			"name": "safeBatchTransferFrom",
+			"outputs": [],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_augur",
+					"type": "address"
+				},
+				{
+					"name": "_market",
+					"type": "address"
+				}
+			],
+			"name": "initialize",
+			"outputs": [],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "owners",
+					"type": "address[]"
+				},
+				{
+					"name": "ids",
+					"type": "uint256[]"
+				}
+			],
+			"name": "balanceOfBatch",
+			"outputs": [
+				{
+					"name": "balances_",
+					"type": "uint256[]"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "market",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "cash",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "operator",
+					"type": "address"
+				},
+				{
+					"name": "approved",
+					"type": "bool"
+				}
+			],
+			"name": "setApprovalForAll",
+			"outputs": [],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [
+				{
+					"name": "owner",
+					"type": "address"
+				},
+				{
+					"name": "operator",
+					"type": "address"
+				}
+			],
+			"name": "isApprovedForAll",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "getInitialized",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": true,
+			"inputs": [],
+			"name": "getMarket",
+			"outputs": [
+				{
+					"name": "",
+					"type": "address"
+				}
+			],
+			"payable": false,
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "from",
+					"type": "address"
+				},
+				{
+					"name": "to",
+					"type": "address"
+				},
+				{
+					"name": "id",
+					"type": "uint256"
+				},
+				{
+					"name": "value",
+					"type": "uint256"
+				},
+				{
+					"name": "data",
+					"type": "bytes"
+				}
+			],
+			"name": "safeTransferFrom",
+			"outputs": [],
+			"payable": false,
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"name": "operator",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"name": "from",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"name": "to",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"name": "id",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"name": "value",
+					"type": "uint256"
+				}
+			],
+			"name": "TransferSingle",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"name": "operator",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"name": "from",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"name": "to",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"name": "ids",
+					"type": "uint256[]"
+				},
+				{
+					"indexed": false,
+					"name": "values",
+					"type": "uint256[]"
+				}
+			],
+			"name": "TransferBatch",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"name": "owner",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"name": "operator",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"name": "approved",
+					"type": "bool"
+				}
+			],
+			"name": "ApprovalForAll",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": false,
+					"name": "value",
+					"type": "string"
+				},
+				{
+					"indexed": true,
+					"name": "id",
+					"type": "uint256"
+				}
+			],
+			"name": "URI",
+			"type": "event"
+		}
+	],
+	"BuyParticipationTokens": [
+		{
+			"constant": false,
+			"inputs": [
+				{
+					"name": "_universe",
+					"type": "address"
+				},
+				{
+					"name": "_attotokens",
+					"type": "uint256"
+				}
+			],
+			"name": "buyParticipationTokens",
+			"outputs": [
+				{
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"payable": false,
+			"stateMutability": "nonpayable",
 			"type": "function"
 		}
 	],
