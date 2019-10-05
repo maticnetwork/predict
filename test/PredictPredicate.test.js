@@ -85,22 +85,4 @@ contract('PredictPredicate', async function(accounts) {
     // Take the order with a different account
     const amountRemaining = zeroXTrade.trade(amount, affiliateAddress, tradeGroupId, orders, signatures).send({ from: accounts[1] })
   })
-
-  it('other', async function() {
-    // const rep = await universe.methods.getReputationToken().call({ from: accounts[0] })
-    // const repTransfer = await (new web3.eth.Contract(abis.TestNetReputationToken, rep)).methods.faucet(0).send({ from })
-    // console.log(repTransfer)
-    // const augur = augurHelper.getAugur()
-    // console.log(await augur.getPastEvents('MarketCreated'))
-    // await new Promise((resolve, reject) => {
-    //   .on('receipt', function(receipt) {
-    //     console.log(receipt);
-    //     resolve()
-    //   })
-    // })
-    // const createUniverse = await augur.methods.createGenesisUniverse().send({ from })
-    // console.log(await web3.eth.getTransaction(createUniverse.transactionHash))
-    // console.log('web3.version', web3.version)
-    // console.log(await web3.eth.getTransactionReceipt(createMarket.transactionHash))
-  })
 })
