@@ -5,6 +5,7 @@ let addresses = require('../test/helpers/AugurContracts/addresses.json')['103']
 // let addresses = require('../test/helpers/AugurContracts/addresses2.json')
 const augurHelper = require('../test/helpers/AugurHelper.js')
 const { signatureUtils } = require("0x.js")
+const fs = require('fs')
 
 let accounts = ['0x913dA4198E6bE1D5f5E4a40D0667f70C0B5430Eb', '0xbd355a7e5a7adb23b51f54027e624bfe0e238df6']
 let from = accounts[0]
@@ -103,6 +104,7 @@ async function run() {
   console.log(`Amount remaining from fill: ${amountRemaining}`);
   const tradeTx = await trade.send({ from: otherAccount, gas: 2000000 })
   console.log('tradeTx', tradeTx)
+  await writeToFile(tradeTx)
 
   const newFromBalance = await cash.balanceOf(from).call();
   const newOtherBalance = await cash.balanceOf(otherAccount).call();
@@ -122,3 +124,12 @@ run().then((result) => {
   console.log(error);
   process.exit();
 });
+
+async function writeToFile(receipt) {
+  const r = {
+    tx: await web3.eth.getTransaction(receipt.transactionHash),
+    receipt: await web3.eth.getTransactionReceipt(receipt.transactionHash),
+    block: await web3.eth.getBlock(receipt.blockHash, true /* returnTransactionObjects */)
+  }
+  return fs.writeFileSync('./trade.json', JSON.stringify(r, null, 2))
+}

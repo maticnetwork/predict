@@ -1,4 +1,5 @@
 pragma solidity 0.5.10;
+pragma experimental ABIEncoderV2;
 
 import { RLPReader } from "solidity-rlp/contracts/RLPReader.sol";
 import { BytesLib } from "./lib/BytesLib.sol";
@@ -6,12 +7,16 @@ import { BytesLib } from "./lib/BytesLib.sol";
 import { Registry } from "./Registry.sol";
 import { DepositAndWithdrawHelper } from "./DepositAndWithdrawHelper.sol";
 
+import "./augur/external/IExchange.sol";
+import "./augur/trading/ZeroXTrade.sol";
+
 contract PredictPredicate {
   using RLPReader for bytes;
   using RLPReader for RLPReader.RLPItem;
 
   Registry public registry;
   DepositAndWithdrawHelper public withdraw;
+  ZeroXTrade public zeroXTrade;
 
   struct ExitTxData {
     address market;
@@ -89,7 +94,28 @@ contract PredictPredicate {
     outcome = BytesLib.toUint(logData, 87);
   }
 
-  function processExitTx(bytes memory exitTx) internal returns (ExitTxData memory) {
+  function processExitTx(bytes memory exitTx) internal returns (ExitTxData memory) {}
 
+  /**
+   * @dev Start exit with a zeroX trade
+   * @param _taker Order filler
+   */
+  function trade(
+      uint256 _requestedFillAmount,
+      address _affiliateAddress,
+      bytes32 _tradeGroupId,
+      IExchange.Order[] memory _orders,
+      bytes[] memory _signatures,
+      address _taker)
+    public
+  {
+    // @todo Handle case where the exitor is exiting with a trade where that was filled by someone else
+    require(
+      _taker == msg.sender,
+      "Exitor is not the order taker"
+    );
+    zeroXTrade.trade(_requestedFillAmount, _affiliateAddress, _tradeGroupId, _orders, _signatures, _taker);
+    // Logic for starting an exit
   }
+
 }
