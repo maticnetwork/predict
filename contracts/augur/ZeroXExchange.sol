@@ -1,14 +1,16 @@
 pragma solidity 0.5.10;
 pragma experimental ABIEncoderV2;
 
-import 'ROOT/external/IExchange.sol';
-import 'ROOT/libraries/ReentrancyGuard.sol';
-import 'ROOT/external/IWallet.sol';
-import 'ROOT/libraries/math/SafeMathUint256.sol';
-import 'ROOT/libraries/token/IERC1155.sol';
+import "./external/IExchange.sol";
+// import { IExchange } from "./external/IExchange.sol";
+// import 'ROOT/external/IExchange.sol';
+// import 'ROOT/libraries/ReentrancyGuard.sol';
+import './external/IWallet.sol';
+import './libraries/math/SafeMathUint256.sol';
+// import 'ROOT/libraries/token/IERC1155.sol';
 
 
-contract ZeroXExchange is IExchange, ReentrancyGuard {
+contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     using SafeMathUint256 for uint256;
 
     // EIP191 header for EIP712 prefix
@@ -111,7 +113,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     ///      Modifies the first FillResults instance specified.
     /// @param totalFillResults Fill results instance that will be added onto.
     /// @param singleFillResults Fill results instance that will be added to totalFillResults.
-    function addFillResults(FillResults memory totalFillResults, FillResults memory singleFillResults)
+    function addFillResults(IExchange.FillResults memory totalFillResults, IExchange.FillResults memory singleFillResults)
         internal
         pure
     {
@@ -121,314 +123,6 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
         totalFillResults.takerFeePaid = totalFillResults.takerFeePaid.add(singleFillResults.takerFeePaid);
     }
 
-    /// @dev Fills the input order.
-    ///      Returns false if the transaction would otherwise revert.
-    /// @param order Order struct containing order specifications.
-    /// @param takerAssetFillAmount Desired amount of takerAsset to sell.
-    /// @param signature Proof that order has been created by maker.
-    /// @return Amounts filled and fees paid by maker and taker.
-    function fillOrderNoThrow(
-        Order memory order,
-        uint256 takerAssetFillAmount,
-        bytes memory signature
-    )
-        public
-        returns (FillResults memory fillResults)
-    {
-        // ABI encode calldata for `fillOrder`
-        bytes memory fillOrderCalldata = abiEncodeFillOrder(
-            order,
-            takerAssetFillAmount,
-            signature
-        );
-
-        // Delegate to `fillOrder` and handle any exceptions gracefully
-        assembly {
-            let success := delegatecall(
-                gas,                                // forward all gas
-                address,                            // call address of this contract
-                add(fillOrderCalldata, 32),         // pointer to start of input (skip array length in first 32 bytes)
-                mload(fillOrderCalldata),           // length of input
-                fillOrderCalldata,                  // write output over input
-                128                                 // output size is 128 bytes
-            )
-            if success {
-                mstore(fillResults, mload(fillOrderCalldata))
-                mstore(add(fillResults, 32), mload(add(fillOrderCalldata, 32)))
-                mstore(add(fillResults, 64), mload(add(fillOrderCalldata, 64)))
-                mstore(add(fillResults, 96), mload(add(fillOrderCalldata, 96)))
-            }
-        }
-        // fillResults values will be 0 by default if call was unsuccessful
-        return fillResults;
-    }
-
-    /// @dev ABI encodes calldata for `fillOrder`.
-    /// @param order Order struct containing order specifications.
-    /// @param takerAssetFillAmount Desired amount of takerAsset to sell.
-    /// @param signature Proof that order has been created by maker.
-    /// @return ABI encoded calldata for `fillOrder`.
-    function abiEncodeFillOrder(
-        Order memory order,
-        uint256 takerAssetFillAmount,
-        bytes memory signature
-    )
-        internal
-        pure
-        returns (bytes memory fillOrderCalldata)
-    {
-        // We need to call MExchangeCore.fillOrder using a delegatecall in
-        // assembly so that we can intercept a call that throws. For this, we
-        // need the input encoded in memory in the Ethereum ABIv2 format [1].
-
-        // | Area     | Offset | Length  | Contents                                    |
-        // | -------- |--------|---------|-------------------------------------------- |
-        // | Header   | 0x00   | 4       | function selector                           |
-        // | Params   |        | 3 * 32  | function parameters:                        |
-        // |          | 0x00   |         |   1. offset to order (*)                    |
-        // |          | 0x20   |         |   2. takerAssetFillAmount                   |
-        // |          | 0x40   |         |   3. offset to signature (*)                |
-        // | Data     |        | 12 * 32 | order:                                      |
-        // |          | 0x000  |         |   1.  senderAddress                         |
-        // |          | 0x020  |         |   2.  makerAddress                          |
-        // |          | 0x040  |         |   3.  takerAddress                          |
-        // |          | 0x060  |         |   4.  feeRecipientAddress                   |
-        // |          | 0x080  |         |   5.  makerAssetAmount                      |
-        // |          | 0x0A0  |         |   6.  takerAssetAmount                      |
-        // |          | 0x0C0  |         |   7.  makerFeeAmount                        |
-        // |          | 0x0E0  |         |   8.  takerFeeAmount                        |
-        // |          | 0x100  |         |   9.  expirationTimeSeconds                 |
-        // |          | 0x120  |         |   10. salt                                  |
-        // |          | 0x140  |         |   11. Offset to makerAssetData (*)          |
-        // |          | 0x160  |         |   12. Offset to takerAssetData (*)          |
-        // |          | 0x180  | 32      | makerAssetData Length                       |
-        // |          | 0x1A0  | **      | makerAssetData Contents                     |
-        // |          | 0x1C0  | 32      | takerAssetData Length                       |
-        // |          | 0x1E0  | **      | takerAssetData Contents                     |
-        // |          | 0x200  | 32      | signature Length                            |
-        // |          | 0x220  | **      | signature Contents                          |
-
-        // * Offsets are calculated from the beginning of the current area: Header, Params, Data:
-        //     An offset stored in the Params area is calculated from the beginning of the Params section.
-        //     An offset stored in the Data area is calculated from the beginning of the Data section.
-
-        // ** The length of dynamic array contents are stored in the field immediately preceeding the contents.
-
-        // [1]: https://solidity.readthedocs.io/en/develop/abi-spec.html
-
-        assembly {
-
-            // Areas below may use the following variables:
-            //   1. <area>Start   -- Start of this area in memory
-            //   2. <area>End     -- End of this area in memory. This value may
-            //                       be precomputed (before writing contents),
-            //                       or it may be computed as contents are written.
-            //   3. <area>Offset  -- Current offset into area. If an area's End
-            //                       is precomputed, this variable tracks the
-            //                       offsets of contents as they are written.
-
-            /////// Setup Header Area ///////
-            // Load free memory pointer
-            fillOrderCalldata := mload(0x40)
-            // bytes4(keccak256("fillOrder((address,address,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bytes,bytes),uint256,bytes)"))
-            // = 0xb4be83d5
-            // Leave 0x20 bytes to store the length
-            mstore(add(fillOrderCalldata, 0x20), 0xb4be83d500000000000000000000000000000000000000000000000000000000)
-            let headerAreaEnd := add(fillOrderCalldata, 0x24)
-
-            /////// Setup Params Area ///////
-            // This area is preallocated and written to later.
-            // This is because we need to fill in offsets that have not yet been calculated.
-            let paramsAreaStart := headerAreaEnd
-            let paramsAreaEnd := add(paramsAreaStart, 0x60)
-            let paramsAreaOffset := paramsAreaStart
-
-            /////// Setup Data Area ///////
-            let dataAreaStart := paramsAreaEnd
-            let dataAreaEnd := dataAreaStart
-
-            // Offset from the source data we're reading from
-            let sourceOffset := order
-            // arrayLenBytes and arrayLenWords track the length of a dynamically-allocated bytes array.
-            let arrayLenBytes := 0
-            let arrayLenWords := 0
-
-            /////// Write order Struct ///////
-            // Write memory location of Order, relative to the start of the
-            // parameter list, then increment the paramsAreaOffset respectively.
-            mstore(paramsAreaOffset, sub(dataAreaEnd, paramsAreaStart))
-            paramsAreaOffset := add(paramsAreaOffset, 0x20)
-
-            // Write values for each field in the order
-            // It would be nice to use a loop, but we save on gas by writing
-            // the stores sequentially.
-            mstore(dataAreaEnd, mload(sourceOffset))                            // makerAddress
-            mstore(add(dataAreaEnd, 0x20), mload(add(sourceOffset, 0x20)))      // takerAddress
-            mstore(add(dataAreaEnd, 0x40), mload(add(sourceOffset, 0x40)))      // feeRecipientAddress
-            mstore(add(dataAreaEnd, 0x60), mload(add(sourceOffset, 0x60)))      // senderAddress
-            mstore(add(dataAreaEnd, 0x80), mload(add(sourceOffset, 0x80)))      // makerAssetAmount
-            mstore(add(dataAreaEnd, 0xA0), mload(add(sourceOffset, 0xA0)))      // takerAssetAmount
-            mstore(add(dataAreaEnd, 0xC0), mload(add(sourceOffset, 0xC0)))      // makerFeeAmount
-            mstore(add(dataAreaEnd, 0xE0), mload(add(sourceOffset, 0xE0)))      // takerFeeAmount
-            mstore(add(dataAreaEnd, 0x100), mload(add(sourceOffset, 0x100)))    // expirationTimeSeconds
-            mstore(add(dataAreaEnd, 0x120), mload(add(sourceOffset, 0x120)))    // salt
-            mstore(add(dataAreaEnd, 0x140), mload(add(sourceOffset, 0x140)))    // Offset to makerAssetData
-            mstore(add(dataAreaEnd, 0x160), mload(add(sourceOffset, 0x160)))    // Offset to takerAssetData
-            dataAreaEnd := add(dataAreaEnd, 0x180)
-            sourceOffset := add(sourceOffset, 0x180)
-
-            // Write offset to <order.makerAssetData>
-            mstore(add(dataAreaStart, mul(10, 0x20)), sub(dataAreaEnd, dataAreaStart))
-
-            // Calculate length of <order.makerAssetData>
-            sourceOffset := mload(add(order, 0x140)) // makerAssetData
-            arrayLenBytes := mload(sourceOffset)
-            sourceOffset := add(sourceOffset, 0x20)
-            arrayLenWords := div(add(arrayLenBytes, 0x1F), 0x20)
-
-            // Write length of <order.makerAssetData>
-            mstore(dataAreaEnd, arrayLenBytes)
-            dataAreaEnd := add(dataAreaEnd, 0x20)
-
-            // Write contents of <order.makerAssetData>
-            for {let i := 0} lt(i, arrayLenWords) {i := add(i, 1)} {
-                mstore(dataAreaEnd, mload(sourceOffset))
-                dataAreaEnd := add(dataAreaEnd, 0x20)
-                sourceOffset := add(sourceOffset, 0x20)
-            }
-
-            // Write offset to <order.takerAssetData>
-            mstore(add(dataAreaStart, mul(11, 0x20)), sub(dataAreaEnd, dataAreaStart))
-
-            // Calculate length of <order.takerAssetData>
-            sourceOffset := mload(add(order, 0x160)) // takerAssetData
-            arrayLenBytes := mload(sourceOffset)
-            sourceOffset := add(sourceOffset, 0x20)
-            arrayLenWords := div(add(arrayLenBytes, 0x1F), 0x20)
-
-            // Write length of <order.takerAssetData>
-            mstore(dataAreaEnd, arrayLenBytes)
-            dataAreaEnd := add(dataAreaEnd, 0x20)
-
-            // Write contents of  <order.takerAssetData>
-            for {let i := 0} lt(i, arrayLenWords) {i := add(i, 1)} {
-                mstore(dataAreaEnd, mload(sourceOffset))
-                dataAreaEnd := add(dataAreaEnd, 0x20)
-                sourceOffset := add(sourceOffset, 0x20)
-            }
-
-            /////// Write takerAssetFillAmount ///////
-            mstore(paramsAreaOffset, takerAssetFillAmount)
-            paramsAreaOffset := add(paramsAreaOffset, 0x20)
-
-            /////// Write signature ///////
-            // Write offset to paramsArea
-            mstore(paramsAreaOffset, sub(dataAreaEnd, paramsAreaStart))
-
-            // Calculate length of signature
-            sourceOffset := signature
-            arrayLenBytes := mload(sourceOffset)
-            sourceOffset := add(sourceOffset, 0x20)
-            arrayLenWords := div(add(arrayLenBytes, 0x1F), 0x20)
-
-            // Write length of signature
-            mstore(dataAreaEnd, arrayLenBytes)
-            dataAreaEnd := add(dataAreaEnd, 0x20)
-
-            // Write contents of signature
-            for {let i := 0} lt(i, arrayLenWords) {i := add(i, 1)} {
-                mstore(dataAreaEnd, mload(sourceOffset))
-                dataAreaEnd := add(dataAreaEnd, 0x20)
-                sourceOffset := add(sourceOffset, 0x20)
-            }
-
-            // Set length of calldata
-            mstore(fillOrderCalldata, sub(dataAreaEnd, add(fillOrderCalldata, 0x20)))
-
-            // Increment free memory pointer
-            mstore(0x40, dataAreaEnd)
-        }
-
-        return fillOrderCalldata;
-    }
-
-    /// @dev Fills the input order.
-    /// @param order Order struct containing order specifications.
-    /// @param takerAssetFillAmount Desired amount of takerAsset to sell.
-    /// @param signature Proof that order has been created by maker.
-    /// @return Amounts filled and fees paid by maker and taker.
-    function fillOrder(
-        Order memory order,
-        uint256 takerAssetFillAmount,
-        bytes memory signature
-    )
-        public
-        nonReentrant
-        returns (FillResults memory fillResults)
-    {
-        fillResults = fillOrderInternal(
-            order,
-            takerAssetFillAmount,
-            signature
-        );
-        return fillResults;
-    }
-
-    /// @dev Executes an exchange method call in the context of signer.
-    /// @param salt Arbitrary number to ensure uniqueness of transaction hash.
-    /// @param signerAddress Address of transaction signer.
-    /// @param data AbiV2 encoded calldata.
-    /// @param signature Proof of signer transaction by signer.
-    function executeTransaction(
-        uint256 salt,
-        address signerAddress,
-        bytes memory data,
-        bytes memory signature
-    )
-        internal
-    {
-        // Prevent reentrancy
-        require(
-            currentContextAddress == address(0),
-            "REENTRANCY_ILLEGAL"
-        );
-
-        bytes32 hashedTransaction = hashZeroExTransaction(salt, signerAddress, data);
-        bytes32 transactionHash = hashEIP712Message(hashedTransaction);
-
-        // Validate transaction has not been executed
-        require(!transactions[transactionHash], "INVALID_TX_HASH");
-
-        // Transaction always valid if signer is sender of transaction
-        if (signerAddress != msg.sender) {
-            // Validate signature
-            require(
-                isValidSignature(
-                    transactionHash,
-                    signerAddress,
-                    signature
-                ),
-                "INVALID_TX_SIGNATURE"
-            );
-
-            // Set the current transaction signer
-            currentContextAddress = signerAddress;
-        }
-
-        // Execute transaction
-        transactions[transactionHash] = true;
-        (bool success,) = address(this).delegatecall(data);
-        require(
-            success,
-            "FAILED_EXECUTION"
-        );
-
-        // Reset current transaction signer if it was previously updated
-        if (signerAddress != msg.sender) {
-            currentContextAddress = address(0);
-        }
-    }
-
     /// @dev Updates state with results of a fill order.
     /// @param orderTakerAssetFilledAmount Amount of order already filled.
     function updateFilledState(
@@ -436,7 +130,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
         address,
         bytes32 orderHash,
         uint256 orderTakerAssetFilledAmount,
-        FillResults memory fillResults
+        IExchange.FillResults memory fillResults
     )
         internal
     {
@@ -450,12 +144,12 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param signature Proof that order has been created by maker.
     /// @return Amounts filled and fees paid by maker and taker.
     function fillOrderInternal(
-        Order memory order,
+        IExchange.Order memory order,
         uint256 takerAssetFillAmount,
         bytes memory signature
     )
-        internal
-        returns (FillResults memory fillResults)
+        public
+        returns (IExchange.FillResults memory fillResults)
     {
         // Fetch order info
         OrderInfo memory orderInfo = getOrderInfo(order);
@@ -497,11 +191,11 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
         );
 
         // Settle order
-        settleOrder(
-            order,
-            takerAddress,
-            fillResults
-        );
+        // settleOrder(
+        //     order,
+        //     takerAddress,
+        //     fillResults
+        // );
 
         return fillResults;
     }
@@ -513,7 +207,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param takerAssetFilledAmount Amount of takerAsset that will be filled.
     /// @param makerAssetFilledAmount Amount of makerAsset that will be transfered.
     function assertValidFill(
-        Order memory order,
+        IExchange.Order memory order,
         OrderInfo memory orderInfo,
         uint256 takerAssetFillAmount,  // TODO: use FillResults
         uint256 takerAssetFilledAmount,
@@ -575,12 +269,12 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param takerAssetFilledAmount Amount of takerAsset that will be filled.
     /// @return fillResults Amounts filled and fees paid by maker and taker.
     function calculateFillResults(
-        Order memory order,
+        IExchange.Order memory order,
         uint256 takerAssetFilledAmount
     )
         internal
         pure
-        returns (FillResults memory fillResults)
+        returns (IExchange.FillResults memory fillResults)
     {
         // Compute proportional transfer amounts
         fillResults.takerAssetFilledAmount = takerAssetFilledAmount;
@@ -608,9 +302,9 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param takerAddress Address selling takerAsset and buying makerAsset.
     /// @param fillResults Amounts to be filled and fees paid by maker and taker.
     function settleOrder(
-        Order memory order,
+        IExchange.Order memory order,
         address takerAddress,
-        FillResults memory fillResults
+        IExchange.FillResults memory fillResults
     )
         private
     {
@@ -672,7 +366,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param order Order to gather information on.
     /// @return OrderInfo Information about the order and its state.
     ///         See LibOrder.OrderInfo for a complete description.
-    function getOrderInfo(Order memory order)
+    function getOrderInfo(IExchange.Order memory order)
         public
         view
         returns (OrderInfo memory orderInfo)
@@ -732,7 +426,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @dev Calculates Keccak-256 hash of the order.
     /// @param order The order structure.
     /// @return Keccak-256 EIP712 hash of the order.
-    function getOrderHash(Order memory order)
+    function getOrderHash(IExchange.Order memory order)
         internal
         view
         returns (bytes32 orderHash)
@@ -744,7 +438,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @dev Calculates EIP712 hash of the order.
     /// @param order The order structure.
     /// @return EIP712 hash of the order.
-    function hashOrder(Order memory order)
+    function hashOrder(IExchange.Order memory order)
         internal
         pure
         returns (bytes32 result)
@@ -847,7 +541,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param takerAddress Address of order taker.
     /// @param signature Proof that the orders was created by its maker.
     function assertFillableOrder(
-        Order memory order,
+        IExchange.Order memory order,
         OrderInfo memory orderInfo,
         address takerAddress,
         bytes memory signature
@@ -1290,22 +984,22 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param from Address to transfer asset from.
     /// @param to Address to transfer asset to.
     /// @param amount Amount of asset to transfer.
-    function transferFrom(
-        bytes calldata assetData,
-        address from,
-        address to,
-        uint256 amount
-    )
-        external
-    {
-        require(msg.sender == address(this));
-        transferFromInternal(
-            assetData,
-            from,
-            to,
-            amount
-        );
-    }
+    // function transferFrom(
+    //     bytes calldata assetData,
+    //     address from,
+    //     address to,
+    //     uint256 amount
+    // )
+    //     external
+    // {
+    //     require(msg.sender == address(this));
+    //     transferFromInternal(
+    //         assetData,
+    //         from,
+    //         to,
+    //         amount
+    //     );
+    // }
 
     /// @dev Transfers batch of ERC1155 assets. Either succeeds or throws.
     /// @param assetData Byte array encoded with ERC1155 token address, array of ids, array of values, and callback data.
@@ -1313,38 +1007,38 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     /// @param to Address to transfer assets to.
     /// @param amount Amount that will be multiplied with each element of `assetData.values` to scale the
     ///        values that will be transferred.
-    function transferFromInternal(
-        bytes memory assetData,
-        address from,
-        address to,
-        uint256 amount
-    )
-        private
-    {
-        // Decode params from `assetData`
-        (address erc1155TokenAddress, uint256[] memory ids, uint256[] memory values, bytes memory data) = abi.decode(sliceDestructive(assetData, 4, assetData.length), (address, uint256[], uint256[], bytes));
+    // function transferFromInternal(
+    //     bytes memory assetData,
+    //     address from,
+    //     address to,
+    //     uint256 amount
+    // )
+    //     private
+    // {
+    //     // Decode params from `assetData`
+    //     (address erc1155TokenAddress, uint256[] memory ids, uint256[] memory values, bytes memory data) = abi.decode(sliceDestructive(assetData, 4, assetData.length), (address, uint256[], uint256[], bytes));
 
-        // Scale values up by `amount`
-        uint256 length = values.length;
-        uint256[] memory scaledValues = new uint256[](length);
-        for (uint256 i = 0; i != length; i++) {
-            // We write the scaled values to an unused location in memory in order
-            // to avoid copying over `ids` or `data`. This is possible if they are
-            // identical to `values` and the offsets for each are pointing to the
-            // same location in the ABI encoded calldata.
-            scaledValues[i] = values[i].mul(amount);
-        }
+    //     // Scale values up by `amount`
+    //     uint256 length = values.length;
+    //     uint256[] memory scaledValues = new uint256[](length);
+    //     for (uint256 i = 0; i != length; i++) {
+    //         // We write the scaled values to an unused location in memory in order
+    //         // to avoid copying over `ids` or `data`. This is possible if they are
+    //         // identical to `values` and the offsets for each are pointing to the
+    //         // same location in the ABI encoded calldata.
+    //         scaledValues[i] = values[i].mul(amount);
+    //     }
 
-        // Execute `safeBatchTransferFrom` call
-        // Either succeeds or throws
-        IERC1155(erc1155TokenAddress).safeBatchTransferFrom(
-            from,
-            to,
-            ids,
-            scaledValues,
-            data
-        );
-    }
+    //     // Execute `safeBatchTransferFrom` call
+    //     // Either succeeds or throws
+    //     IERC1155(erc1155TokenAddress).safeBatchTransferFrom(
+    //         from,
+    //         to,
+    //         ids,
+    //         scaledValues,
+    //         data
+    //     );
+    // }
 
     /// @dev Decode ERC-1155 asset data from the format described in the AssetProxy contract specification.
     /// @param assetData AssetProxy-compliant asset data describing an ERC-1155 set of assets.
