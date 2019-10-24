@@ -6,9 +6,12 @@ import { BytesLib } from "./lib/BytesLib.sol";
 
 import { Registry } from "./Registry.sol";
 import { DepositAndWithdrawHelper } from "./DepositAndWithdrawHelper.sol";
+import { IMarket } from "./augur/reporting/IMarket.sol";
 
 import "./augur/external/IExchange.sol";
 import "./augur/trading/ZeroXTrade.sol";
+import "./augur/trading/IClaimTradingProceeds.sol";
+import { IOICash } from "./augur/trading/IOICash.sol";
 
 contract PredictPredicate {
   using RLPReader for bytes;
@@ -17,6 +20,10 @@ contract PredictPredicate {
   Registry public registry;
   DepositAndWithdrawHelper public withdraw;
   ZeroXTrade public zeroXTrade;
+  IClaimTradingProceeds public claimTradingProceeds;
+
+  IERC20 public cash;
+  IOICash public oICash;
 
   struct ExitTxData {
     address market;
@@ -26,9 +33,10 @@ contract PredictPredicate {
     uint256 finalOutcomeOne;
   }
 
-  constructor(address _registry, address _exitProcessor) public {
+  constructor(address _registry, address _exitProcessor, address _cash) public {
     registry = Registry(_registry);
     withdraw = DepositAndWithdrawHelper(_exitProcessor);
+    cash = IERC20(_cash);
   }
 
   function startExitForYesNoMarketShares(bytes calldata outcome1Proof, bytes calldata outcome2Proof, bytes calldata exitTx) external {
@@ -118,4 +126,84 @@ contract PredictPredicate {
     // Logic for starting an exit
   }
 
+  function startExit(uint256 exitId, address maticMarket) external {
+    IMarket market = _getMainChainMarket(address(_maticMarket));
+    uint256 numOutcomes = market.getNumberOfOutcomes();
+    uint256[] memory balances = new uint256[](numOutcomes);
+    uint256 exitPriority = 0;
+    address exitor = msg.sender;
+
+    uint256 priority;
+    // assuming outcome numbers are sequential
+    for (uint256 outcome = 0; outcome < numOutcomes; outcome++) {
+      (balances[outcome], priority) = accounts.balanceAndPriority(exitId, exitor, maticMarket, outcome);
+      exitPriority = Max(exitPriority, priority);
+    }
+    addExitToQueue(exitor, exitPriority, maticMarket, balances);
+  }
+
+  function startExitForOICash(uint256 exitId) external {
+    address exitor = msg.sender;
+    (uint256 OICashBalance, uint256 exitPriority) = accounts.balanceAndPriority(exitId, exitor);
+    addExitToQueue(exitor, exitPriority, OICashBalance);
+  }
+
+  function onExitFinalize(address exitor, IMarket market, uint256[] balances) {
+    if (market.isFinalized()) {
+      processExitForFinalizedMarket(market, balances);
+    } else {
+      processExitForMarket(market, balances);
+    }
+  }
+
+  function processExitForMarket(address exitor, IMarket market, uint256[] balances) {
+    uint256 numOutcomes = market.getNumberOfOutcomes();
+
+    uint256 completeSetsToBuy;
+    // try to give as many shares from escrow as possible
+    for (uint256 outcome = 0; outcome < numOutcomes; outcome++) {
+      uint256 sharesInEscrow = _market.getShareToken(_outcome).balanceOf(address(this));
+      if (sharesInEscrow < balances[outcome]) {
+        completeSetsToBuy = Max(completeSetsToBuy, balances[outcome] - sharesInEscrow);
+      }
+    }
+
+    if (completeSetsToBuy > 0) {
+      OICash.buyCompleteSets(market, completeSetsToBuy);
+    }
+
+    for (uint256 outcome = 0; outcome < numOutcomes; outcome++) {
+      // transfer balances[outcome] shares to exitor
+      _market.getShareToken(_outcome).transfer(exitor, balances[outcome])
+    }
+  }
+
+  mapping(address => bool) claimedTradingProceeds;
+  function processExitForFinalizedMarket(IMarket market, uint256[] balances) {
+    if (!claimedTradingProceeds[address(market)]) {
+      claimTradingProceeds.claimTradingProceeds(
+        market, address(this) /* _shareHolder */ , address(0) /* _affiliateAddress */);
+      claimedTradingProceeds[address(market)] = true;
+    }
+
+    // since trading proceeds have been called, predicate has 0 shares for all outcomes
+    uint256 numOutcomes = market.getNumberOfOutcomes();
+    uint256 payout;
+    for (uint256 outcome = 0; outcome < numOutcomes; outcome++) {
+      payout += calculateProceeds(market, outcome, balances[outcome]);
+    }
+
+    // try to settle payout with cash
+    uint256 cashAvailable = cash.balanceOf(address(this));
+    if (cashAvailable < payout) {
+      uint256 feeDeducted = oICash.withdraw(payout - cashAvailable);
+    }
+    // @todo actual payout might be lesser
+    cash.transfer(/* exitor */, payout - feeDeducted);
+  }
+
+  function calculateProceeds(IMarket _market, uint256 _outcome, uint256 _numberOfShares) public view returns (uint256) {
+    uint256 _payoutNumerator = _market.getWinningPayoutNumerator(_outcome);
+    return _numberOfShares.mul(_payoutNumerator);
+  }
 }

@@ -28,7 +28,7 @@ contract IMarket /* is IOwnable */ {
     // function getDisputeWindow() public view returns (IDisputeWindow);
     function getNumberOfOutcomes() public view returns (uint256);
     function getNumTicks() public view returns (uint256);
-    // function getShareToken(uint256 _outcome)  public view returns (address);
+    function getShareToken(uint256 _outcome)  public view returns (address);
     // // function getShareToken(uint256 _outcome)  public view returns (IShareToken);
     // function getMarketCreatorSettlementFeeDivisor() public view returns (uint256);
     // function getForkingMarket() public view returns (IMarket _market);
@@ -49,6 +49,6 @@ contract IMarket /* is IOwnable */ {
     // function finalize() public returns (bool);
     // function designatedReporterWasCorrect() public view returns (bool);
     // function designatedReporterShowed() public view returns (bool);
-    // function isFinalized() public view returns (bool);
+    function isFinalized() public view returns (bool);
     // function assertBalances() public view returns (bool);
 }
