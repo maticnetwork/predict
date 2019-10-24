@@ -10,12 +10,22 @@ import "../libraries/math/SafeMathUint256.sol";
 
 
 contract ZeroXTrade is IZeroXTrade {
-  using SafeMathUint256 for uint256;
+    using SafeMathUint256 for uint256;
 
-  IExchange exchange;
-  FillOrder fillOrder;
+    IExchange exchange;
+    FillOrder fillOrder;
 
-  function trade(
+    /**
+     * Perform Augur Trades using 0x signed orders
+     *
+     * @param  _requestedFillAmount  Share amount to fill
+     * @param  _affiliateAddress     Address of affiliate to be paid fees if any
+     * @param  _tradeGroupId         Random id to correlate these fills as one trade action
+     * @param  _orders               Array of encoded Order struct data
+     * @param  _signatures           Array of signature data
+     * @return                       The amount the taker still wants
+     */
+    function trade(
         uint256 _requestedFillAmount,
         address _affiliateAddress,
         bytes32 _tradeGroupId,

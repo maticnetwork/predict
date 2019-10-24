@@ -13,7 +13,8 @@ import '../reporting/IMarket.sol';
 // import 'ROOT/trading/IShareToken.sol';
 // import 'ROOT/trading/IProfitLoss.sol';
 // import 'ROOT/trading/Order.sol';
-// import 'ROOT/libraries/Initializable.sol';
+import '../libraries/Initializable.sol';
+import '../IAugur.sol';
 
 import "../../IAccountManager.sol";
 
@@ -448,14 +449,14 @@ library Trade {
  * @title Fill Order
  * @notice Exposes functions to fill an order on the book
  */
-contract FillOrder /* is Initializable, ReentrancyGuard, IFillOrder */ {
+contract FillOrder is Initializable /*, ReentrancyGuard, IFillOrder */ {
     using SafeMathUint256 for uint256;
     using Trade for Trade.Data;
 
-    // IAugur public augur;
+    IAugur public augur;
     // IOrders public orders;
     // IProfitLoss public profitLoss;
-    // address public ZeroXTrade;
+    address public ZeroXTrade;
     // address public trade;
 
     // mapping (address => uint256) public marketVolume;
@@ -463,14 +464,14 @@ contract FillOrder /* is Initializable, ReentrancyGuard, IFillOrder */ {
 
     // IAccountManager accountManager;
 
-    // function initialize(IAugur _augur) public beforeInitialized {
-    //     endInitialization();
-    //     augur = _augur;
-    //     orders = IOrders(augur.lookup("Orders"));
-    //     trade = augur.lookup("Trade");
-    //     profitLoss = IProfitLoss(augur.lookup("ProfitLoss"));
-    //     ZeroXTrade = augur.lookup("ZeroXTrade");
-    // }
+    function initialize(IAugur _maticSandboxAugur) public beforeInitialized {
+        endInitialization();
+        augur = _maticSandboxAugur;
+        // orders = IOrders(augur.lookup("Orders"));
+        // trade = augur.lookup("Trade");
+        // profitLoss = IProfitLoss(augur.lookup("ProfitLoss"));
+        ZeroXTrade = augur.lookup("ZeroXTrade");
+    }
 
     // function fillOrder(address _filler, bytes32 _orderId, uint256 _amountFillerWants, bytes32 _tradeGroupId, address _affiliateAddress) external returns (uint256) {
     //     // require(msg.sender == trade || msg.sender == address(this));
@@ -479,9 +480,8 @@ contract FillOrder /* is Initializable, ReentrancyGuard, IFillOrder */ {
     // }
 
     function fillZeroXOrder(IMarket _market, uint256 _outcome, IERC20 _kycToken, uint256 _price, Order.Types _orderType, uint256 _amount, address _creator, bytes32 _tradeGroupId, address _affiliateAddress, address _filler) external returns (uint256) {
-        // require(msg.sender == ZeroXTrade);
+        require(msg.sender == ZeroXTrade, "FillOrder.fillZeroXOrder: Unauthorized");
         Trade.OrderData memory _orderData = Trade.createOrderData(_market, _outcome, _kycToken, _price, _orderType, _amount, _creator);
-        // Trade.Data memory _tradeData = Trade.createWithData(augur, _orderData, _filler, _amount, _affiliateAddress);
         Trade.Data memory _tradeData = Trade.createWithData(_orderData, _filler, _amount, _affiliateAddress);
         return fillOrderInternal(_filler, _tradeData, _amount, _tradeGroupId);
     }
