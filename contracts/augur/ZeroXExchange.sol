@@ -2,8 +2,6 @@ pragma solidity 0.5.10;
 pragma experimental ABIEncoderV2;
 
 import "./external/IExchange.sol";
-// import { IExchange } from "./external/IExchange.sol";
-// import 'ROOT/external/IExchange.sol';
 // import 'ROOT/libraries/ReentrancyGuard.sol';
 import './external/IWallet.sol';
 import './libraries/math/SafeMathUint256.sol';
@@ -109,19 +107,6 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
         ));
     }
 
-    /// @dev Adds properties of both FillResults instances.
-    ///      Modifies the first FillResults instance specified.
-    /// @param totalFillResults Fill results instance that will be added onto.
-    /// @param singleFillResults Fill results instance that will be added to totalFillResults.
-    function addFillResults(IExchange.FillResults memory totalFillResults, IExchange.FillResults memory singleFillResults)
-        internal
-        pure
-    {
-        totalFillResults.makerAssetFilledAmount = totalFillResults.makerAssetFilledAmount.add(singleFillResults.makerAssetFilledAmount);
-        totalFillResults.takerAssetFilledAmount = totalFillResults.takerAssetFilledAmount.add(singleFillResults.takerAssetFilledAmount);
-        totalFillResults.makerFeePaid = totalFillResults.makerFeePaid.add(singleFillResults.makerFeePaid);
-        totalFillResults.takerFeePaid = totalFillResults.takerFeePaid.add(singleFillResults.takerFeePaid);
-    }
 
     /// @dev Updates state with results of a fill order.
     /// @param orderTakerAssetFilledAmount Amount of order already filled.
@@ -130,7 +115,7 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
         address,
         bytes32 orderHash,
         uint256 orderTakerAssetFilledAmount,
-        IExchange.FillResults memory fillResults
+        FillResults memory fillResults
     )
         internal
     {
@@ -144,12 +129,12 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @param signature Proof that order has been created by maker.
     /// @return Amounts filled and fees paid by maker and taker.
     function fillOrderInternal(
-        IExchange.Order memory order,
+        Order memory order,
         uint256 takerAssetFillAmount,
         bytes memory signature
     )
         public
-        returns (IExchange.FillResults memory fillResults)
+        returns (FillResults memory fillResults)
     {
         // Fetch order info
         OrderInfo memory orderInfo = getOrderInfo(order);
@@ -207,7 +192,7 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @param takerAssetFilledAmount Amount of takerAsset that will be filled.
     /// @param makerAssetFilledAmount Amount of makerAsset that will be transfered.
     function assertValidFill(
-        IExchange.Order memory order,
+        Order memory order,
         OrderInfo memory orderInfo,
         uint256 takerAssetFillAmount,  // TODO: use FillResults
         uint256 takerAssetFilledAmount,
@@ -269,12 +254,12 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @param takerAssetFilledAmount Amount of takerAsset that will be filled.
     /// @return fillResults Amounts filled and fees paid by maker and taker.
     function calculateFillResults(
-        IExchange.Order memory order,
+        Order memory order,
         uint256 takerAssetFilledAmount
     )
         internal
         pure
-        returns (IExchange.FillResults memory fillResults)
+        returns (FillResults memory fillResults)
     {
         // Compute proportional transfer amounts
         fillResults.takerAssetFilledAmount = takerAssetFilledAmount;
@@ -302,9 +287,9 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @param takerAddress Address selling takerAsset and buying makerAsset.
     /// @param fillResults Amounts to be filled and fees paid by maker and taker.
     function settleOrder(
-        IExchange.Order memory order,
+        Order memory order,
         address takerAddress,
-        IExchange.FillResults memory fillResults
+        FillResults memory fillResults
     )
         private
     {
@@ -366,7 +351,7 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @param order Order to gather information on.
     /// @return OrderInfo Information about the order and its state.
     ///         See LibOrder.OrderInfo for a complete description.
-    function getOrderInfo(IExchange.Order memory order)
+    function getOrderInfo(Order memory order)
         public
         view
         returns (OrderInfo memory orderInfo)
@@ -426,7 +411,7 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @dev Calculates Keccak-256 hash of the order.
     /// @param order The order structure.
     /// @return Keccak-256 EIP712 hash of the order.
-    function getOrderHash(IExchange.Order memory order)
+    function getOrderHash(Order memory order)
         internal
         view
         returns (bytes32 orderHash)
@@ -438,7 +423,7 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @dev Calculates EIP712 hash of the order.
     /// @param order The order structure.
     /// @return EIP712 hash of the order.
-    function hashOrder(IExchange.Order memory order)
+    function hashOrder(Order memory order)
         internal
         pure
         returns (bytes32 result)
@@ -541,7 +526,7 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
     /// @param takerAddress Address of order taker.
     /// @param signature Proof that the orders was created by its maker.
     function assertFillableOrder(
-        IExchange.Order memory order,
+        Order memory order,
         OrderInfo memory orderInfo,
         address takerAddress,
         bytes memory signature
@@ -978,67 +963,6 @@ contract ZeroXExchange is IExchange /*, ReentrancyGuard */ {
         }
         return isValid;
     }
-
-    /// @dev Transfers assets. Either succeeds or throws.
-    /// @param assetData Encoded byte array.
-    /// @param from Address to transfer asset from.
-    /// @param to Address to transfer asset to.
-    /// @param amount Amount of asset to transfer.
-    // function transferFrom(
-    //     bytes calldata assetData,
-    //     address from,
-    //     address to,
-    //     uint256 amount
-    // )
-    //     external
-    // {
-    //     require(msg.sender == address(this));
-    //     transferFromInternal(
-    //         assetData,
-    //         from,
-    //         to,
-    //         amount
-    //     );
-    // }
-
-    /// @dev Transfers batch of ERC1155 assets. Either succeeds or throws.
-    /// @param assetData Byte array encoded with ERC1155 token address, array of ids, array of values, and callback data.
-    /// @param from Address to transfer assets from.
-    /// @param to Address to transfer assets to.
-    /// @param amount Amount that will be multiplied with each element of `assetData.values` to scale the
-    ///        values that will be transferred.
-    // function transferFromInternal(
-    //     bytes memory assetData,
-    //     address from,
-    //     address to,
-    //     uint256 amount
-    // )
-    //     private
-    // {
-    //     // Decode params from `assetData`
-    //     (address erc1155TokenAddress, uint256[] memory ids, uint256[] memory values, bytes memory data) = abi.decode(sliceDestructive(assetData, 4, assetData.length), (address, uint256[], uint256[], bytes));
-
-    //     // Scale values up by `amount`
-    //     uint256 length = values.length;
-    //     uint256[] memory scaledValues = new uint256[](length);
-    //     for (uint256 i = 0; i != length; i++) {
-    //         // We write the scaled values to an unused location in memory in order
-    //         // to avoid copying over `ids` or `data`. This is possible if they are
-    //         // identical to `values` and the offsets for each are pointing to the
-    //         // same location in the ABI encoded calldata.
-    //         scaledValues[i] = values[i].mul(amount);
-    //     }
-
-    //     // Execute `safeBatchTransferFrom` call
-    //     // Either succeeds or throws
-    //     IERC1155(erc1155TokenAddress).safeBatchTransferFrom(
-    //         from,
-    //         to,
-    //         ids,
-    //         scaledValues,
-    //         data
-    //     );
-    // }
 
     /// @dev Decode ERC-1155 asset data from the format described in the AssetProxy contract specification.
     /// @param assetData AssetProxy-compliant asset data describing an ERC-1155 set of assets.

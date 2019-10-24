@@ -9,11 +9,17 @@ import "../reporting/IMarket.sol";
 import "../libraries/math/SafeMathUint256.sol";
 
 
-contract ZeroXTrade is IZeroXTrade {
+contract ZeroXTrade is Initializable, IZeroXTrade {
     using SafeMathUint256 for uint256;
 
     IExchange exchange;
     FillOrder fillOrder;
+
+    function initialize(IAugur _augur) public beforeInitialized {
+        endInitialization();
+        fillOrder = FillOrder(_augur.lookup("FillOrder"));
+        exchange = IExchange(_augur.lookup("ZeroXExchange"));
+    }
 
     /**
      * Perform Augur Trades using 0x signed orders

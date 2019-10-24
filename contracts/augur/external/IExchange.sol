@@ -47,7 +47,7 @@ contract IExchange {
     /// @return Amounts filled and fees paid by maker and taker.
     function fillOrder(Order memory order, uint256 takerAssetFillAmount, bytes memory signature) public returns (FillResults memory fillResults);
 
-    // @todo clean this together with the one above this
+    // @todo clean this together with fillOrder
     function fillOrderInternal(Order memory order, uint256 takerAssetFillAmount, bytes memory signature) public returns (FillResults memory fillResults);
 
     /// @dev Fills an order with specified parameters and ECDSA signature.

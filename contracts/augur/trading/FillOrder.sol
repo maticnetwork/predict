@@ -1,7 +1,6 @@
 pragma solidity 0.5.10;
 pragma experimental ABIEncoderV2;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // import 'ROOT/trading/IFillOrder.sol';
 // import 'ROOT/libraries/ReentrancyGuard.sol';
@@ -14,8 +13,9 @@ import '../reporting/IMarket.sol';
 // import 'ROOT/trading/IProfitLoss.sol';
 // import 'ROOT/trading/Order.sol';
 import '../libraries/Initializable.sol';
-import '../IAugur.sol';
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '../IAugur.sol';
 import "../../IAccountManager.sol";
 
 library Order {
@@ -35,14 +35,12 @@ library Trade {
     struct Contracts {
         // IOrders orders;
         IMarket market;
-        IAccountManager accounts;
         // ICompleteSets completeSets;
         // ICash denominationToken;
-        // IShareToken longShareToken;
-        // IShareToken[] shortShareTokens;
         uint256 longShareToken;
         uint256[] shortShareTokens;
-        // IAugur augur;
+        IAugur augur;
+        IAccountManager accounts;
     }
 
     struct FilledOrder {
@@ -85,20 +83,8 @@ library Trade {
         bytes32 orderId;
     }
 
-    //
-    // Constructor
-    //
-
-    // function create(IAugur _augur, bytes32 _orderId, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal view returns (Data memory) {
-    //     OrderData memory _orderData = createOrderDataWithOrderId(_augur, _orderId);
-
-    //     return createWithData(_augur, _orderData, _fillerAddress, _fillerSize, _affiliateAddress);
-    // }
-
-    // function createWithData(IAugur _augur, OrderData memory _orderData, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal view returns (Data memory) {
-    function createWithData(OrderData memory _orderData, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal view returns (Data memory) {
-        // Contracts memory _contracts = getContracts(_augur, _orderData.market, _orderData.outcome);
-        Contracts memory _contracts = getContracts(_orderData.market, _orderData.outcome);
+    function createWithData(IAugur _augur, OrderData memory _orderData, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal view returns (Data memory) {
+        Contracts memory _contracts = getContracts(_augur, _orderData.market, _orderData.outcome);
         FilledOrder memory _order = getOrder(_contracts, _orderData.outcome, _orderData.kycToken, _orderData.price, _orderData.orderId);
         Participant memory _creator = getMaker(_orderData.sharesEscrowed, _orderData.amount, _orderData.creator, _orderData.orderType);
         Participant memory _filler = getFiller(_contracts, _orderData.orderType, _fillerAddress, _fillerSize);
@@ -116,22 +102,6 @@ library Trade {
             affiliateAddress: _affiliateAddress
         });
     }
-
-    // function createOrderDataWithOrderId(IAugur _augur, bytes32 _orderId) internal view returns (OrderData memory) {
-    //     IOrders _orders = IOrders(_augur.lookup("Orders"));
-
-    //     return OrderData({
-    //         market: _orders.getMarket(_orderId),
-    //         outcome: _orders.getOutcome(_orderId),
-    //         kycToken: _orders.getKYCToken(_orderId),
-    //         price: _orders.getPrice(_orderId),
-    //         orderType: _orders.getOrderType(_orderId),
-    //         sharesEscrowed: _orders.getOrderSharesEscrowed(_orderId),
-    //         amount: _orders.getAmount(_orderId),
-    //         creator: _orders.getOrderCreator(_orderId),
-    //         orderId: _orderId
-    //     });
-    // }
 
     function createOrderData(IMarket _market, uint256 _outcome, IERC20 _kycToken, uint256 _price, Order.Types _orderType, uint256 _amount, address _creator) internal view returns (OrderData memory) {
         uint256 _sharesAvailable = getSharesAvailable(_market, _orderType, _outcome, _amount, _creator);
@@ -294,13 +264,13 @@ library Trade {
         return (_data.creator.direction == Direction.Short) ? _data.creator.participantAddress : _data.filler.participantAddress;
     }
 
-    // function getLongShareSellerSource(Data memory _data) internal pure returns (address) {
-    //     return (_data.creator.direction == Direction.Short) ? address(_data.contracts.market) : _data.filler.participantAddress;
-    // }
+    function getLongShareSellerSource(Data memory _data) internal pure returns (address) {
+        return (_data.creator.direction == Direction.Short) ? address(_data.contracts.market) : _data.filler.participantAddress;
+    }
 
-    // function getShortShareSellerSource(Data memory _data) internal pure returns (address) {
-    //     return (_data.creator.direction == Direction.Long) ? address(_data.contracts.market) : _data.filler.participantAddress;
-    // }
+    function getShortShareSellerSource(Data memory _data) internal pure returns (address) {
+        return (_data.creator.direction == Direction.Long) ? address(_data.contracts.market) : _data.filler.participantAddress;
+    }
 
     function getLongShareSellerDestination(Data memory _data) internal pure returns (address) {
         return (_data.creator.direction == Direction.Short) ? _data.creator.participantAddress : _data.filler.participantAddress;
@@ -310,27 +280,27 @@ library Trade {
         return (_data.creator.direction == Direction.Long) ? _data.creator.participantAddress : _data.filler.participantAddress;
     }
 
-    // function getMakerSharesDepleted(Data memory _data) internal pure returns (uint256) {
-    //     return _data.creator.startingSharesToSell.sub(_data.creator.sharesToSell);
-    // }
+    function getMakerSharesDepleted(Data memory _data) internal pure returns (uint256) {
+        return _data.creator.startingSharesToSell.sub(_data.creator.sharesToSell);
+    }
 
-    // function getFillerSharesDepleted(Data memory _data) internal pure returns (uint256) {
-    //     return _data.filler.startingSharesToSell.sub(_data.filler.sharesToSell);
-    // }
+    function getFillerSharesDepleted(Data memory _data) internal pure returns (uint256) {
+        return _data.filler.startingSharesToSell.sub(_data.filler.sharesToSell);
+    }
 
-    // function getMakerTokensDepleted(Data memory _data) internal pure returns (uint256) {
-    //     return getTokensDepleted(_data, _data.creator.direction, _data.creator.startingSharesToBuy, _data.creator.sharesToBuy);
-    // }
+    function getMakerTokensDepleted(Data memory _data) internal pure returns (uint256) {
+        return getTokensDepleted(_data, _data.creator.direction, _data.creator.startingSharesToBuy, _data.creator.sharesToBuy);
+    }
 
-    // function getFillerTokensDepleted(Data memory _data) internal pure returns (uint256) {
-    //     return getTokensDepleted(_data, _data.filler.direction, _data.filler.startingSharesToBuy, _data.filler.sharesToBuy);
-    // }
+    function getFillerTokensDepleted(Data memory _data) internal pure returns (uint256) {
+        return getTokensDepleted(_data, _data.filler.direction, _data.filler.startingSharesToBuy, _data.filler.sharesToBuy);
+    }
 
-    // function getTokensDepleted(Data memory _data, Direction _direction, uint256 _startingSharesToBuy, uint256 _endingSharesToBuy) internal pure returns (uint256) {
-    //     return _startingSharesToBuy
-    //         .sub(_endingSharesToBuy)
-    //         .mul((_direction == Direction.Long) ? _data.order.sharePriceLong : _data.order.sharePriceShort);
-    // }
+    function getTokensDepleted(Data memory _data, Direction _direction, uint256 _startingSharesToBuy, uint256 _endingSharesToBuy) internal pure returns (uint256) {
+        return _startingSharesToBuy
+            .sub(_endingSharesToBuy)
+            .mul((_direction == Direction.Long) ? _data.order.sharePriceLong : _data.order.sharePriceShort);
+    }
 
     function getTokensToCover(Data memory _data, Direction _direction, uint256 _numShares) internal pure returns (uint256) {
         return getTokensToCover(_direction, _data.order.sharePriceLong, _data.order.sharePriceShort, _numShares);
@@ -340,18 +310,17 @@ library Trade {
     // Construction helpers
     //
 
-    function getContracts(IMarket _market, uint256 _outcome) private view returns (Contracts memory) {
+    function getContracts(IAugur _augur, IMarket _market, uint256 _outcome) private view returns (Contracts memory) {
         // IOrders _orders = IOrders(_augur.lookup("Orders"));
         return Contracts({
             // orders: _orders,
             market: _market,
-            accounts: _market.getAccountManager(),
             // completeSets: ICompleteSets(_augur.lookup("CompleteSets")),
             // denominationToken: ICash(_augur.lookup("Cash")),
             longShareToken: _outcome,
-            // longShareToken: _market.getShareToken(_outcome),
-            shortShareTokens: getShortShareTokens(_market, _outcome)
-            // augur: _augur
+            shortShareTokens: getShortShareTokens(_market, _outcome),
+            augur: _augur,
+            accounts: _market.getAccountManager()
         });
     }
 
@@ -462,8 +431,6 @@ contract FillOrder is Initializable /*, ReentrancyGuard, IFillOrder */ {
     // mapping (address => uint256) public marketVolume;
     // mapping (address => uint256[]) public marketOutcomeVolumes;
 
-    // IAccountManager accountManager;
-
     function initialize(IAugur _maticSandboxAugur) public beforeInitialized {
         endInitialization();
         augur = _maticSandboxAugur;
@@ -473,16 +440,10 @@ contract FillOrder is Initializable /*, ReentrancyGuard, IFillOrder */ {
         ZeroXTrade = augur.lookup("ZeroXTrade");
     }
 
-    // function fillOrder(address _filler, bytes32 _orderId, uint256 _amountFillerWants, bytes32 _tradeGroupId, address _affiliateAddress) external returns (uint256) {
-    //     // require(msg.sender == trade || msg.sender == address(this));
-    //     Trade.Data memory _tradeData = Trade.create(augur, _orderId, _filler, _amountFillerWants, _affiliateAddress);
-    //     return fillOrderInternal(_filler, _tradeData, _amountFillerWants, _tradeGroupId);
-    // }
-
     function fillZeroXOrder(IMarket _market, uint256 _outcome, IERC20 _kycToken, uint256 _price, Order.Types _orderType, uint256 _amount, address _creator, bytes32 _tradeGroupId, address _affiliateAddress, address _filler) external returns (uint256) {
         require(msg.sender == ZeroXTrade, "FillOrder.fillZeroXOrder: Unauthorized");
         Trade.OrderData memory _orderData = Trade.createOrderData(_market, _outcome, _kycToken, _price, _orderType, _amount, _creator);
-        Trade.Data memory _tradeData = Trade.createWithData(_orderData, _filler, _amount, _affiliateAddress);
+        Trade.Data memory _tradeData = Trade.createWithData(augur, _orderData, _filler, _amount, _affiliateAddress);
         return fillOrderInternal(_filler, _tradeData, _amount, _tradeGroupId);
     }
 

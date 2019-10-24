@@ -11,6 +11,7 @@ import '../trading/IZeroXTradeToken.sol';
 // import 'ROOT/reporting/IV2ReputationToken.sol';
 // import 'ROOT/reporting/IInitialReporter.sol';
 // import 'ROOT/IAugur.sol';
+
 import "../../IAccountManager.sol";
 
 contract IMarket /* is IOwnable */ {
