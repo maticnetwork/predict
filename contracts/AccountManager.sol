@@ -73,6 +73,15 @@ contract AccountManager is IAccountManager {
     return balances[exitId][owner][market].balance;
   }
 
+  function balanceAndPriority(uint256 exitId, address owner, address market, uint256 outcome) external view returns (uint256) {
+    return (balances[exitId][owner][market].balance;
+  }
+
+  // balanceOf OICash
+  function balanceOf(uint256 exitId, address owner) external view returns (uint256) {
+    return oICashBalances[exitId][_from].owner;
+  }
+
   function trustedFillOrderTransfer(address _source, address _destination, address market, uint256 outcome, uint256 _attotokens) external returns (bool) {
     balances[_source][market].balance = balances[_source][market].balance.sub(_attotokens);
     balances[_destination][market].balance = balances[_destination][market].balance.add(_attotokens);

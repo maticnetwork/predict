@@ -19,7 +19,7 @@ contract IMarket /* is IOwnable */ {
         CATEGORICAL,
         SCALAR
     }
-    
+
     function getAccountManager() public view returns (IAccountManager accountManager);
     // function initialize(IAugur _augur, IUniverse _universe, uint256 _endTime, uint256 _feePerCashInAttoCash, uint256 _affiliateFeeDivisor, address _designatedReporterAddress, address _creator, uint256 _numOutcomes, uint256 _numTicks) public;
     // function derivePayoutDistributionHash(uint256[] memory _payoutNumerators) public view returns (bytes32);
@@ -28,7 +28,7 @@ contract IMarket /* is IOwnable */ {
     // function getDisputeWindow() public view returns (IDisputeWindow);
     function getNumberOfOutcomes() public view returns (uint256);
     function getNumTicks() public view returns (uint256);
-    // function getShareToken(uint256 _outcome)  public view returns (address);
+    function getShareToken(uint256 _outcome)  public view returns (address);
     // // function getShareToken(uint256 _outcome)  public view returns (IShareToken);
     // function getMarketCreatorSettlementFeeDivisor() public view returns (uint256);
     // function getForkingMarket() public view returns (IMarket _market);
@@ -49,6 +49,6 @@ contract IMarket /* is IOwnable */ {
     // function finalize() public returns (bool);
     // function designatedReporterWasCorrect() public view returns (bool);
     // function designatedReporterShowed() public view returns (bool);
-    // function isFinalized() public view returns (bool);
+    function isFinalized() public view returns (bool);
     // function assertBalances() public view returns (bool);
 }
