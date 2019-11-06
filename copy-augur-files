@@ -1,0 +1,27 @@
+mkdir -p contracts/augur
+cp ../augur/packages/augur-core/source/contracts/IAugur.sol contracts/augur
+cp ../augur/packages/augur-core/source/contracts/ZeroXExchange.sol contracts/augur
+cp ../augur/packages/augur-core/source/contracts/ICash.sol contracts/augur
+
+mkdir -p contracts/augur/external
+cp ../augur/packages/augur-core/source/contracts/external/IExchange.sol contracts/augur/external
+cp ../augur/packages/augur-core/source/contracts/external/IWallet.sol contracts/augur/external
+
+mkdir -p contracts/augur/libraries/math
+mkdir -p contracts/augur/libraries/token
+cp ../augur/packages/augur-core/source/contracts/libraries/math/SafeMathUint256.sol contracts/augur/libraries/math
+cp ../augur/packages/augur-core/source/contracts/libraries/token/IERC1155.sol contracts/augur/libraries/token
+cp ../augur/packages/augur-core/source/contracts/libraries/Initializable.sol contracts/augur/libraries
+cp ../augur/packages/augur-core/source/contracts/libraries/ITyped.sol contracts/augur/libraries
+
+mkdir -p contracts/augur/reporting
+cp ../augur/packages/augur-core/source/contracts/reporting/IMarket.sol contracts/augur/reporting
+cp ../augur/packages/augur-core/source/contracts/reporting/IOICash.sol contracts/augur/reporting
+cp ../augur/packages/augur-core/source/contracts/reporting/IShareToken.sol contracts/augur/reporting
+
+mkdir -p contracts/augur/trading
+cp ../augur/packages/augur-core/source/contracts/trading/FillOrder.sol contracts/augur/trading
+cp ../augur/packages/augur-core/source/contracts/trading/IFillOrder.sol contracts/augur/trading
+cp ../augur/packages/augur-core/source/contracts/trading/IZeroXTrade.sol contracts/augur/trading
+cp ../augur/packages/augur-core/source/contracts/trading/ZeroXTrade.sol contracts/augur/trading
+cp ../augur/packages/augur-core/source/contracts/trading/IAugurTrading.sol contracts/augur/trading
