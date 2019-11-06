@@ -53,5 +53,8 @@ contract IExchange {
     /// @param takerAssetFillAmount Desired amount of takerAsset to sell.
     /// @param signature Proof that order has been created by maker.
     /// @return Amounts filled and fees paid by maker and taker.
-    function fillOrderNoThrow(Order memory order, uint256 takerAssetFillAmount, bytes memory signature) public payable returns (FillResults memory fillResults);
+
+    // Replacing fillOrderNoThrow with what it calls internally - fillOrderInternal
+    // Keeping the "Internal" in the function name, to keep it compatible with the function in the original contract
+    function fillOrderInternal(Order memory order, uint256 takerAssetFillAmount, bytes memory signature) public returns (FillResults memory fillResults);
 }

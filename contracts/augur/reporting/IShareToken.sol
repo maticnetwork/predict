@@ -1,11 +1,10 @@
 pragma solidity 0.5.10;
 
-
-import 'ROOT/libraries/ITyped.sol';
-import 'ROOT/libraries/token/IERC1155.sol';
-import 'ROOT/reporting/IMarket.sol';
-import 'ROOT/IAugur.sol';
-import 'ROOT/reporting/IUniverse.sol';
+import '../libraries/ITyped.sol';
+import '../libraries/token/IERC1155.sol';
+import '../reporting/IMarket.sol';
+import '../IAugur.sol';
+// import 'ROOT/reporting/IUniverse.sol';
 
 
 contract IShareToken is ITyped, IERC1155 {

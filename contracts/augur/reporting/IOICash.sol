@@ -1,9 +1,7 @@
 pragma solidity 0.5.10;
 
-import 'ROOT/reporting/IUniverse.sol';
-import 'ROOT/libraries/token/IERC20.sol';
-
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract IOICash is IERC20 {
-    function initialize(IAugur _augur, IUniverse _universe, address _erc1820RegistryAddress) external;
+    function deposit(uint256 amount) public returns (bool);
 }

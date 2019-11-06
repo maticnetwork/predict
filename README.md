@@ -23,3 +23,5 @@ cp deployedAddresses <>/predict/scripts/deployedAddresses
 cd <>/predict/scripts
 node addressClipper.js
 ```
+
+Working with augur repo at `c1788fd77b2552e05248769f03b974917a035f60`

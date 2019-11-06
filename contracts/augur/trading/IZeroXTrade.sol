@@ -2,7 +2,7 @@
 pragma solidity 0.5.10;
 pragma experimental ABIEncoderV2;
 
-import "ROOT/external/IExchange.sol";
+import "../external/IExchange.sol";
 
 
 contract IZeroXTrade {
