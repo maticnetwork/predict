@@ -4,7 +4,7 @@ import { Registry } from "./Registry.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { DepositManager } from "matic-protocol/contracts/root/depositManager/DepositManager.sol";
 
-import { IOICash } from "./predict/trading/IOICash.sol";
+import { OICash as IOICash } from "./augur/reporting/OICash.sol";
 
 contract DepositAndWithdrawHelper {
   Registry public registry;
