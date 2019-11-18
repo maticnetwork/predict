@@ -16,8 +16,8 @@ contract IShareToken is ITyped, IERC1155 {
     function claimTradingProceeds(IMarket _market, address _shareHolder, address _affiliateAddress) external returns (uint256[] memory _outcomeFees);
     function getMarket(uint256 _tokenId) external view returns (IMarket);
     function getOutcome(uint256 _tokenId) external view returns (uint256);
-    function getTokenId(IMarket _market, uint256 _outcome) public pure returns (uint256 _tokenId);
-    function getTokenIds(IMarket _market, uint256[] memory _outcomes) public pure returns (uint256[] memory _tokenIds);
+    function getTokenId(IMarket _market, uint256 _outcome) public view returns (uint256 _tokenId);
+    function getTokenIds(IMarket _market, uint256[] memory _outcomes) public view returns (uint256[] memory _tokenIds);
     function buyCompleteSets(IMarket _market, address _account, uint256 _amount) external returns (bool);
     function buyCompleteSetsForTrade(IMarket _market, uint256 _amount, uint256 _longOutcome, address _longRecipient, address _shortRecipient) external returns (bool);
     function sellCompleteSets(IMarket _market, address _holder, address _recipient, uint256 _amount, address _affiliateAddress) external returns (uint256 _creatorFee, uint256 _reportingFee);
@@ -25,4 +25,9 @@ contract IShareToken is ITyped, IERC1155 {
     function totalSupplyForMarketOutcome(IMarket _market, uint256 _outcome) public view returns (uint256);
     function balanceOfMarketOutcome(IMarket _market, uint256 _outcome, address _account) public view returns (uint256);
     function lowestBalanceOfMarketOutcomes(IMarket _market, uint256[] memory _outcomes, address _account) public view returns (uint256);
+
+    // matic predicate functions
+    function getExitId(address _market, address exitor) public pure returns(uint256 _exitId);
+    function setExitId(address _market, address _exitor) public;
+    function unsetExitId() public;
 }

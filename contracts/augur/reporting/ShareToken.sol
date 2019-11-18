@@ -9,15 +9,22 @@ import '../reporting/IMarket.sol';
 import '../trading/IProfitLoss.sol';
 import '../IAugur.sol';
 
+import { RLPReader } from "solidity-rlp/contracts/RLPReader.sol";
 
 /**
  * @title Share Token
  * @notice ERC1155 contract to hold all Augur share token balances
  */
 contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGuard {
+    using RLPReader for bytes;
+    using RLPReader for RLPReader.RLPItem;
 
     string constant public name = "Shares";
     string constant public symbol = "SHARE";
+
+    // keccak256('ShareTokenBalanceChanged(address,address,address,uint256,uint256)')
+    bytes32 constant SHARE_TOKEN_BALANCE_CHANGED_EVENT_SIG = 0x350ea32dc29530b9557420816d743c436f8397086f98c96292138edd69e01cb3;
+    uint256 MAX_LOGS = 10;
 
     struct MarketData {
         uint256 numOutcomes;
@@ -34,6 +41,26 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
     IProfitLoss public profitLoss;
 
     mapping(address => bool) private doesNotUpdatePnl;
+
+    uint256 exitId;
+
+    modifier _setExitId(uint256 _exitId) {
+        exitId = _exitId;
+        _;
+        unsetExitId();
+    }
+
+    function getExitId(address _market, address _exitor) public pure returns(uint256 _exitId) {
+        _exitId = uint256(keccak256(abi.encodePacked(_market, _exitor)));
+    }
+
+    function setExitId(address _market, address _exitor) public /* @todo onlyPredicate */ {
+        exitId = getExitId(_market, _exitor);
+    }
+
+    function unsetExitId() public {
+        exitId = 0;
+    }
 
     function initialize(IAugur _augur) external beforeInitialized {
         endInitialization();
@@ -418,14 +445,11 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
         return _lowest;
     }
 
-    function getTokenId(IMarket _market, uint256 _outcome) public pure returns (uint256 _tokenId) {
-        bytes memory _tokenIdBytes = abi.encodePacked(_market, uint8(_outcome));
-        assembly {
-            _tokenId := mload(add(_tokenIdBytes, add(0x20, 0)))
-        }
+    function getTokenId(IMarket _market, uint256 _outcome) public view returns (uint256 _tokenId) {
+        return uint256(keccak256(abi.encodePacked(exitId, _outcome, exitId)));
     }
 
-    function getTokenIds(IMarket _market, uint256[] memory _outcomes) public pure returns (uint256[] memory _tokenIds) {
+    function getTokenIds(IMarket _market, uint256[] memory _outcomes) public view returns (uint256[] memory _tokenIds) {
         _tokenIds = new uint256[](_outcomes.length);
         for (uint256 _i = 0; _i < _outcomes.length; _i++) {
             _tokenIds[_i] = getTokenId(_market, _outcomes[_i]);
@@ -453,5 +477,34 @@ contract ShareToken is ITyped, Initializable, ERC1155, IShareToken, ReentrancyGu
     function onBurn(uint256 _tokenId, address _target, uint256 _amount) internal {
         (address _marketAddress, uint256 _outcome) = unpackTokenId(_tokenId);
         augur.logShareTokensBalanceChanged(_target, IMarket(_marketAddress), _outcome, balanceOf(_target, _tokenId));
+    }
+
+    function claimBalance(bytes calldata data) external {
+        RLPReader.RLPItem[] memory referenceTxData = data.toRlpItem().toList();
+        bytes memory receipt = referenceTxData[6].toBytes();
+        RLPReader.RLPItem[] memory inputItems = receipt.toRlpItem().toList();
+        uint256 logIndex = referenceTxData[9].toUint();
+        require(logIndex < MAX_LOGS, "Supporting a max of 10 logs");
+        // uint256 age = withdrawManager.verifyInclusion(data, 0 /* offset */, false /* verifyTxInclusion */);
+        inputItems = inputItems[3].toList()[logIndex].toList(); // select log based on given logIndex
+        bytes memory logData = inputItems[2].toBytes();
+        inputItems = inputItems[1].toList(); // topics
+        // now, inputItems[i] refers to i-th (0-based) topic in the topics array
+        // event ShareTokenBalanceChanged(address indexed universe, address indexed account, address indexed market, uint256 outcome, uint256 balance);
+        require(
+            bytes32(inputItems[0].toUint()) == SHARE_TOKEN_BALANCE_CHANGED_EVENT_SIG,
+            "ShareToken.claimBalance: Not ShareTokenBalanceChanged event signature"
+        );
+        // @todo is Universe relevent?
+        address account = address(inputItems[2].toUint());
+        IMarket market = IMarket(address(inputItems[3].toUint()));
+        uint256 outcome = inputItems[4].toUint();
+        uint256 balance = inputItems[5].toUint();
+        uint256 _exitId = getExitId(address(market), msg.sender);
+        _mint(_exitId, msg.sender, market, outcome, balance);
+    }
+
+    function _mint(uint256 _exitId, address to, IMarket market, uint256 outcome, uint256 value) internal _setExitId(_exitId) {
+        super._mint(to, getTokenId(market, outcome), value, bytes("") /* data */, false /* doAcceptanceCheck */);
     }
 }

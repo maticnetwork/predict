@@ -191,8 +191,10 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
         address _affiliateAddress,
         bytes32 _tradeGroupId,
         IExchange.Order[] memory _orders,
-        bytes[] memory _signatures
+        bytes[] memory _signatures,
+        address _taker
     )
+        /* @todo onlyPredicate */
         public
         payable
         returns (uint256)
@@ -220,15 +222,14 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
                 continue;
             }
 
-            uint256 _amountTraded = doTrade(_order, totalFillResults.takerAssetFilledAmount, _affiliateAddress, _tradeGroupId, msg.sender);
-
+            uint256 _amountTraded  = doTrade(_order, totalFillResults.takerAssetFilledAmount, _affiliateAddress, _tradeGroupId, _taker);
             _fillAmountRemaining = _fillAmountRemaining.sub(_amountTraded);
         }
 
         transferFromAllowed = false;
 
         if (address(this).balance > 0) {
-            msg.sender.transfer(address(this).balance);
+            address(uint160(_taker)).transfer(address(this).balance);
         }
 
         return _fillAmountRemaining;
@@ -243,7 +244,7 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
     }
 
     function doTrade(IExchange.Order memory _order, uint256 _amount, address _affiliateAddress, bytes32 _tradeGroupId, address _taker) private returns (uint256) {
-        // parseOrderData will validate that the token being traded is the leigitmate one for the market
+        // parseOrderData will validate that the token being traded is the legitimate one for the market
         AugurOrderData memory _augurOrderData = parseOrderData(_order);
         // If the signed order creator doesnt have enough funds we still want to continue and take their order out of the list
         // If the filler doesn't have funds this will just fail, which is fine
