@@ -1,9 +1,5 @@
 pragma solidity 0.5.10;
 
-// interface Registry {
-//     function childToRootMarket(address _childMarket) external view returns (address _rootMarket, uint256 _numOutcomes, uint256 _numTicks);
-//     function zeroXTrade() external view returns (address);
-// }
 
 contract Registry {
     struct Market {
@@ -13,8 +9,9 @@ contract Registry {
     }
 
     mapping(address => Market) public childToRootMarket;
+    mapping(address => address) public zeroXExchange;
     address public zeroXTrade;
-    address public zeroXExchange;
+    address public rootZeroXTrade;
 
 
     function mapMarket(address childMarket, address rootMarket, uint256 numOutcomes, uint256 numTicks) public /* @todo onlyOwner */ {
@@ -25,7 +22,11 @@ contract Registry {
         zeroXTrade = _zeroXTrade;
     }
 
-    function setZeroXExchange(address _zeroXTrade) public /* @todo onlyOwner */ {
-        zeroXExchange = _zeroXTrade;
+    function setRootZeroXTrade(address _zeroXTrade) public /* @todo onlyOwner */ {
+        rootZeroXTrade = _zeroXTrade;
+    }
+
+    function setZeroXExchange(address childExchange, address rootExchange) public /* @todo onlyOwner */ {
+        zeroXExchange[childExchange] = rootExchange;
     }
 }

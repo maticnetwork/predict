@@ -53,7 +53,8 @@ const artifacts = {
     predicate: {
         augurPredicate: new web3.eth.Contract(abis.predicate.AugurPredicate, addresses.predicate.AugurPredicate),
         registry: new web3.eth.Contract(require('../build/contracts/Registry.json').abi, addresses.predicate.Registry),
-        zeroXTrade: new web3.eth.Contract(abis.predicate.ZeroXTrade, addresses.predicate.ZeroXTrade)
+        zeroXTrade: new web3.eth.Contract(abis.predicate.ZeroXTrade, addresses.predicate.ZeroXTrade),
+        ZeroXExchange: new web3.eth.Contract(abis.predicate.ZeroXExchange, addresses.predicate.ZeroXExchange)
     }
 }
 
@@ -77,15 +78,14 @@ async function createMarket(options, network = 'main') {
     console.log('getOrCacheValidityBond', validityBond, 'cash balance', await cash.balanceOf(from).call())
     const endTime = options.currentTime + (30 * DAY)
     await cash.approve(addresses[network].Augur, MAX_AMOUNT).send({ from })
-    console.log('cash.allowance', await cash.allowance(from, addresses.main.Augur).call())
+    console.log('cash.allowance', await cash.allowance(from, addresses[network].Augur).call())
     const market = await createReasonableYesNoMarket(universe, endTime, from);
     return market
 }
 
 async function createReasonableYesNoMarket(universe, endTime, from) {
-    // const hexEndTime = web3.utils.numberToHex(endTime);
     const createMarket = universe.methods.createYesNoMarket(endTime, 0, 0, from, '')
-    console.log("Getting market address");
+    console.log('Getting market address');
     const marketAddress = await createMarket.call({ from })
     console.log(`Creating market at: ${marketAddress}`);
     await createMarket.send({ from, gas: 4000000 })

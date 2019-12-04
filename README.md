@@ -6,8 +6,12 @@ yarn
 
 git clone git@github.com:atvanguard/augur.git
 mv augur predicate
+cd predicate
+git checkout dev-predicate
 
-git clone git@github.com:AugurProject/augur.git
+git clone git@github.com:atvanguard/augur.git
+cd augur
+git checkout c1788fd77b
 
 cd augur
 yarn
