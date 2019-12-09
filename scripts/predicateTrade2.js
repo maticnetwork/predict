@@ -15,6 +15,7 @@ async function setup() {
     const market = await utils.createMarket({ currentTime }, 'matic')
     const marketAddress = market.options.address
     const numOutcomes = parseInt(await rootMarket.methods.getNumberOfOutcomes().call())
+    console.log('numOutcomes', numOutcomes)
     const numTicks = parseInt(await rootMarket.methods.getNumTicks().call())
     await artifacts.predicate.registry.methods.mapMarket(
         market.options.address, // child market
@@ -27,58 +28,96 @@ async function setup() {
 
 async function run() {
     const { currentTime, numTicks, marketAddress, rootMarket } = await setup()
+    const _artifacts = artifacts.matic
+    const zeroXTrade = _artifacts.zeroXTrade
+    const cash = _artifacts.cash.methods
+    const shareToken = _artifacts.shareToken
 
     // do trades on child chain
     // Make an order for 1000 attoShares
-    const amount = 1000, price = 60
-    const { orders, signatures, affiliateAddress, tradeGroupId, _zeroXOrder } = await utils.createOrder({
-        marketAddress, amount, price, currentTime, outcome: 1 /* Yes */, direction: 0 /* Bid */},
+    let amount = 1000, price = 60
+    let { orders, signatures, affiliateAddress, tradeGroupId, _zeroXOrder } = await utils.createOrder(
+        { marketAddress, amount, price, currentTime, outcome: 1 /* Yes */, direction: 0 /* Bid */},
         'matic',
         from
     )
-
     const fillAmount = 1200
-
-    // This trade was created, however the filler was being censored, so they seek consolation from the predicate
-
-    // 1. Initialize exit
-    const { exitShareToken, exitCashToken } = await initializeExit(marketAddress)
-    const cash = exitCashToken.methods
-
-    const exitId = await artifacts.predicate.augurPredicate.methods.getExitId(marketAddress, otherAccount).call()
-
-    // console.log(
-    //     exitShareToken.options.address,
-    //     exitCashToken.options.address,
-    //     await artifacts.predicate.augurPredicate.methods.lookupExit(exitId).call()
-    // )
-
-    // 2. Filler will provide proof that counterparty had enough cash
     const creatorCost = amount * price;
     const fillerCost = fillAmount * (numTicks - price);
     // mocking this step to just using faucet for now (@todo fix)
     await cash.faucet(creatorCost).send({ from, gas })
     await cash.faucet(fillerCost).send({ from: otherAccount, gas })
-    const fromBalance = await cash.balanceOf(from).call()
-    const otherBalance = await cash.balanceOf(otherAccount).call()
 
-    // 3. Replay trade
-    const trade = await artifacts.predicate.augurPredicate.methods
-        .trade(amount, affiliateAddress, tradeGroupId, orders, signatures, otherAccount)
-        .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
-    // console.log('trade', JSON.stringify(trade, null, 2))
-    const filledAmount = Math.min(amount, fillAmount)
+    await utils.approvals('matic');
+    let fromBalance = await cash.balanceOf(from).call()
+    let otherBalance = await cash.balanceOf(otherAccount).call()
+
+    console.log(`Filling Zero X Order`);
+    let trade = zeroXTrade.methods.trade(fillAmount, affiliateAddress, tradeGroupId, orders, signatures);
+    const amountRemaining = await trade.call({ from: otherAccount, gas: 2000000, value: web3.utils.toWei('.01') });
+    console.log(`Amount remaining from fill: ${amountRemaining}`);
+    assert.equal(amountRemaining, fillAmount - amount)
+    let tradeTx = await trade.send({ from: otherAccount, gas: 5000000, value: web3.utils.toWei('.01') });
+    // console.log('tradeTx', tradeTx)
+
+    let filledAmount = Math.min(amount, fillAmount)
     assert.equal(
-        await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
+        await shareToken.methods.balanceOfMarketOutcome(marketAddress, 1, from).call(),
         filledAmount
     )
     assert.equal(
-        await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
+        await shareToken.methods.balanceOfMarketOutcome(marketAddress, 0, otherAccount).call(),
         filledAmount
     )
     assert.equal(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
     assert.equal(await cash.balanceOf(otherAccount).call(), otherBalance - filledAmount * (numTicks - price))
+
+    // sell shares
+    amount = 300, price = 70
+    const _orders = [], _signatures = []
+    ;(
+        { orders, signatures, affiliateAddress, tradeGroupId, _zeroXOrder } = await utils.createOrder(
+            { marketAddress, amount, price, currentTime, outcome: 1 /* Yes */, direction: 1 /* Ask */ },
+            'matic',
+            from
+        )
+    )
+    _orders.push(orders[0])
+    _signatures.push(signatures[0])
+
+    // This trade was created, however the filler was being censored, so they seek consolation from the predicate
+    // await zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
+
+    // 1. Initialize exit
+    const { exitShareToken, exitCashToken } = await initializeExit(marketAddress)
+
+    const exitId = await artifacts.predicate.augurPredicate.methods.getExitId(marketAddress, otherAccount).call()
+
+    console.log({ exitShareToken: exitShareToken.options.address, exitCashToken: exitCashToken.options.address})
+
+    // 2. Provide proof of self and counterparty share balance
+    await artifacts.predicate.augurPredicate.methods
+        .claimBalanceFaucet(from, marketAddress, 1, filledAmount).send({ from: otherAccount, gas })
+    await artifacts.predicate.augurPredicate.methods
+        .claimBalanceFaucet(otherAccount, marketAddress, 0, filledAmount).send({ from: otherAccount, gas })
+    // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...
+    await artifacts.predicate.augurPredicate.methods
+        .claimBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
+
+    trade = await artifacts.predicate.augurPredicate.methods
+        .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures, otherAccount)
+        .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
+
+    assert.equal(
+        await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
+        filledAmount - amount
+    )
+    assert.equal(
+        await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
+        filledAmount - amount
+    )
 }
+
 
 async function initializeExit(marketAddress) {
     // For Exiting, we need a new version of shareToken and Cash

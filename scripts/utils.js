@@ -1,14 +1,13 @@
 const Web3 = require('web3');
 const { signatureUtils } = require('0x.js')
 
+const { LogDecoder } = require('@maticnetwork/eth-decoder').default
+
 const abis = {
     main: require('../augur/packages/augur-core/output/contracts/abi.json'),
     matic: require('../augur/packages/augur-core/output/contracts/abi.json'),
     predicate: require('../predicate/packages/augur-core/output/contracts/abi.json'),
-    predicate_contracts_output: 'predicate/packages/augur-core/output/contracts/contracts.json',
-    // plasma: {
-    //     registry: require('../build/contracts/Registry.json').abi
-    // }
+    predicate_contracts_output: 'predicate/packages/augur-core/output/contracts/contracts.json'
 }
 
 const addresses = {
@@ -25,6 +24,7 @@ const networks = {
     predicate: { web3 },
     matic: { web3: childWeb3 },
 }
+
 let accounts = ['0x913dA4198E6bE1D5f5E4a40D0667f70C0B5430Eb', '0xbd355a7e5a7adb23b51f54027e624bfe0e238df6']
 
 let from = accounts[0]
@@ -58,12 +58,15 @@ const artifacts = {
     }
 }
 
+const _abis = ['FillOrder', 'ZeroXTrade', 'ZeroXExchange'].map(k => abis.predicate[k])
+artifacts.predicate.logDecoder = new LogDecoder(_abis)
+
 async function createMarket(options, network = 'main') {
     const _artifacts = artifacts[network]
     const DAY = 24 * 60 * 60
     const universe = _artifacts.universe
     // const augur = _artifacts.augur
-    console.log("Getting Rep bond");
+    console.log('Getting Rep bond');
     const repBond = await universe.methods.getOrCacheMarketRepBond().call()
     const repAddress = await universe.methods.getReputationToken().call({ from })
     console.log('repAddress', repAddress)
@@ -96,7 +99,7 @@ function stringTo32ByteHex(stringToEncode) {
     return `0x${Buffer.from(stringToEncode, 'utf8').toString('hex').padEnd(64, '0')}`;
 }
 
-async function createOrder(info, network = 'main') {
+async function createOrder(info, network = 'main', from) {
     const _artifacts = artifacts[network]
     // Zero X trading happens through the ZeroXTrade contract
     const zeroXTrade = _artifacts.zeroXTrade
@@ -107,9 +110,10 @@ async function createOrder(info, network = 'main') {
     const expirationTime = info.currentTime + 10000
     // Make a call to our contract to properly format the signed order and get the hash for it that we must sign
     console.log("Creating 0x order")
-    const { _zeroXOrder, _orderHash } = await zeroXTrade.methods.createZeroXOrder(direction, info.amount, price, info.marketAddress, outcome, nullAddress, expirationTime, _artifacts.ZeroXExchange.options.address, info.currentTime).call()
+    const { _zeroXOrder, _orderHash } = await zeroXTrade.methods.createZeroXOrder(direction, info.amount, price, info.marketAddress, outcome, nullAddress, expirationTime, _artifacts.ZeroXExchange.options.address, info.currentTime).call({ from })
     // Sign the order and prepare the order data / signature for filling
-    const signature = await signatureUtils.ecSignHashAsync(web3.currentProvider, _orderHash, from)
+    console.log('from', from)
+    const signature = await signatureUtils.ecSignHashAsync(networks[network].web3.currentProvider, _orderHash, from)
 
     // Confirm the signature is valid
     const zeroXExchangeAddress = await _artifacts.augur.methods.lookup(web3.utils.asciiToHex("ZeroXExchange")).call()
@@ -135,6 +139,27 @@ async function createOrder(info, network = 'main') {
     return { orders, signatures, affiliateAddress, tradeGroupId, _zeroXOrder }
 }
 
+function approvals(network = 'main') {
+    const _artifacts = artifacts[network]
+    const cash = _artifacts.cash.methods
+    const shareToken = _artifacts.shareToken.methods
+
+    // not sure which of these approvals are actually required
+    return Promise.all([
+        cash.approve(addresses[network].Augur, MAX_AMOUNT).send({ from: otherAccount }),
+        cash.approve(addresses[network].CreateOrder, MAX_AMOUNT).send({ from: otherAccount }),
+        cash.approve(addresses[network].FillOrder, MAX_AMOUNT).send({ from: otherAccount }),
+        shareToken.setApprovalForAll(addresses[network].CreateOrder, true).send({ from: otherAccount }),
+        shareToken.setApprovalForAll(addresses[network].FillOrder, true).send({ from: otherAccount }),
+
+        cash.approve(addresses[network].Augur, MAX_AMOUNT).send({ from }),
+        cash.approve(addresses[network].CreateOrder, MAX_AMOUNT).send({ from }),
+        cash.approve(addresses[network].FillOrder, MAX_AMOUNT).send({ from }),
+        shareToken.setApprovalForAll(addresses[network].CreateOrder, true).send({ from }),
+        shareToken.setApprovalForAll(addresses[network].FillOrder, true).send({ from })
+    ])
+}
+
 module.exports = {
     createMarket,
     web3,
@@ -145,5 +170,6 @@ module.exports = {
     artifacts,
     createOrder,
     nullAddress,
+    approvals,
     MAX_AMOUNT
 }

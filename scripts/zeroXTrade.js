@@ -20,8 +20,11 @@ async function run() {
     const price = 60 // price 60 in a standard market means 60 cents
     const fillAmount = 1200
     const zeroXTrade = artifacts.main.zeroXTrade
-    const { orders, signatures, affiliateAddress, tradeGroupId, _zeroXOrder } = await utils.createOrder({
-        marketAddress, amount, price, currentTime, outcome: 1 /* Yes */, direction: 0 /* Bid */})
+    const { orders, signatures, affiliateAddress, tradeGroupId, _zeroXOrder } = await utils.createOrder(
+        { marketAddress, amount, price, currentTime, outcome: 1 /* Yes */, direction: 0 /* Bid */ },
+        'main',
+        from
+    )
 
     const numTicks = parseInt(await market.methods.getNumTicks().call());
     // Calculate the cost of the trade for both parties and faucet them to needed Cash
@@ -32,7 +35,7 @@ async function run() {
     await cash.faucet(creatorCost).send({ from, gas })
     await cash.faucet(fillerCost).send({ from: otherAccount, gas })
 
-    await approvals(cash);
+    await utils.approvals();
 
     const fromBalance = await cash.balanceOf(from).call();
     const otherBalance = await cash.balanceOf(otherAccount).call();
@@ -65,22 +68,6 @@ async function run() {
     )
     assert.equal(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
     assert.equal(await cash.balanceOf(otherAccount).call(), otherBalance - filledAmount * (numTicks - price))
-}
-
-async function approvals(cash) {
-    const shareToken = artifacts.main.shareToken.methods
-    // not sure which of these approvals are actually required
-    await cash.approve(addresses.main.Augur, utils.MAX_AMOUNT).send({ from: otherAccount })
-    await cash.approve(addresses.main.CreateOrder, utils.MAX_AMOUNT).send({ from: otherAccount })
-    await cash.approve(addresses.main.FillOrder, utils.MAX_AMOUNT).send({ from: otherAccount })
-    await shareToken.setApprovalForAll(addresses.main.CreateOrder, true).send({ from: otherAccount })
-    await shareToken.setApprovalForAll(addresses.main.FillOrder, true).send({ from: otherAccount })
-
-    await cash.approve(addresses.main.Augur, utils.MAX_AMOUNT).send({ from })
-    await cash.approve(addresses.main.CreateOrder, utils.MAX_AMOUNT).send({ from })
-    await cash.approve(addresses.main.FillOrder, utils.MAX_AMOUNT).send({ from })
-    await shareToken.setApprovalForAll(addresses.main.CreateOrder, true).send({ from })
-    await shareToken.setApprovalForAll(addresses.main.FillOrder, true).send({ from })
 }
 
 run().then(() => {

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "0x.js": "^7.0.2",
+    "@maticnetwork/eth-decoder": "^0.0.2",
     "async-file": "^2.0.2",
     "web3": "^1.2.4"
   },
