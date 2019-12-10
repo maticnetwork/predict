@@ -5,7 +5,8 @@
   "author": "atvanguard <93arpit@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "truffle": "truffle"
+    "truffle": "truffle",
+    "test": "mocha"
   },
   "dependencies": {
     "0x.js": "^7.0.2",

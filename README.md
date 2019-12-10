@@ -17,12 +17,11 @@ npm i
 
 **2. Augur Predicate**
 ```
-git clone git@github.com:atvanguard/augur.git
-mv augur predicate
+git clone git@github.com:atvanguard/augur.git predicate
 cd predicate
-git checkout dev-predicate
+git checkout dev-augur-exits # or the branch that you are developing on
 yarn
-yarn build # Builds the ts files in sub directories, required for compiling and deploying
+yarn build # Builds the ts files in sub directories, required for compiling and deploying contracts
 cd packages/augur-core
 # Install dependencies by following instructions from the README in this directory
 ```
@@ -31,7 +30,7 @@ cd packages/augur-core
 ```
 git clone git@github.com:atvanguard/augur.git
 cd augur
-git checkout c1788fd77b
+git checkout c1788fd77b # Augur contracts locked at commit id c1788fd77b
 yarn
 yarn build
 cd packages/augur-core
@@ -49,6 +48,7 @@ ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcce
 ```
 
 ### D. Deploy Contracts
+Back to home directory of the project for each of the following:
 
 **1. Matic contracts**
 ```
