@@ -1,38 +1,32 @@
-const Registry = artifacts.require('Registry');
-const utils = require('../scripts/utils')
 const fs = require('fs')
-const assert = require('assert')
+
+const Deposits = artifacts.require('Deposits');
+const PredicateRegistry = artifacts.require('PredicateRegistry');
+
+const utils = require('../scripts/utils')
 
 module.exports = async function(deployer) {
-    await deployer.deploy(Registry);
-    console.log(`Deployed Registry at ${Registry.address}`)
-    const registry = await Registry.deployed()
+    await deployer.deploy(PredicateRegistry);
 
-    // some registry related initializations
-    await utils.artifacts.predicate.augurPredicate
-        .methods
-        .setRegistry(Registry.address)
-        .send({ from: utils.from, gas: 1000000 });
-    assert.equal(Registry.address, await utils.artifacts.predicate.augurPredicate.methods.registry().call())
+    const OICash = await utils.getOICashContract('main')
+    await deployer.deploy(
+        Deposits,
+        utils.addresses.main.Cash,
+        OICash.options.address,
+        utils.addresses.plasma.root.DepositManagerProxy,
+        utils.addresses.main.Augur,
+    );
 
-    await utils.artifacts.predicate.zeroXTrade
-        .methods
-        .setRegistry(Registry.address)
-        .send({ from: utils.from, gas: 1000000 });
-    assert.equal(Registry.address, await utils.artifacts.predicate.zeroXTrade.methods.registry().call())
+    // map OICash token in the plasma registry
+    const childOICash = await utils.getOICashContract('matic')
+    await utils.artifacts.plasma.Registry.methods.mapToken(
+        OICash.options.address,
+        childOICash.options.address,
+        false /* _isERC721 */
+    ).send({ from: utils.from, gas: utils.gas })
 
-    await utils.artifacts.predicate.ZeroXExchange
-        .methods
-        .setRegistry(Registry.address)
-        .send({ from: utils.from, gas: 1000000 });
-    assert.equal(Registry.address, await utils.artifacts.predicate.ZeroXExchange.methods.registry().call())
-
-    await registry.setZeroXTrade(utils.addresses.matic.ZeroXTrade)
-    await registry.setRootZeroXTrade(utils.addresses.predicate.ZeroXTrade)
-    await registry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange)
-    
-    // write registry address to predicate addresses file
+    // write addresses to predicate addresses file
     const predicateAddresses = JSON.parse(fs.readFileSync('./output/addresses.predicate.json'))
-    predicateAddresses.Registry = Registry.address
+    predicateAddresses.helpers = { PredicateRegistry: PredicateRegistry.address, Deposits: Deposits.address }
     fs.writeFileSync('./output/addresses.predicate.json', JSON.stringify(predicateAddresses, null, 2))
 };

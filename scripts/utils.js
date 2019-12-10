@@ -13,7 +13,8 @@ const abis = {
 const addresses = {
     main: require('../output/addresses.main.json'),
     predicate: require('../output/addresses.predicate.json'),
-    matic: require('../output/addresses.matic.json')
+    matic: require('../output/addresses.matic.json'),
+    plasma: require('../output/addresses.plasma.json')
 }
 
 const web3 = new Web3('http://localhost:8545');
@@ -52,9 +53,18 @@ const artifacts = {
     },
     predicate: {
         augurPredicate: new web3.eth.Contract(abis.predicate.AugurPredicate, addresses.predicate.AugurPredicate),
-        registry: new web3.eth.Contract(require('../build/contracts/Registry.json').abi, addresses.predicate.Registry),
         zeroXTrade: new web3.eth.Contract(abis.predicate.ZeroXTrade, addresses.predicate.ZeroXTrade),
         ZeroXExchange: new web3.eth.Contract(abis.predicate.ZeroXExchange, addresses.predicate.ZeroXExchange)
+    },
+    plasma: {
+        Registry: new web3.eth.Contract(
+            require(`../matic/build/contracts/Registry.json`).abi,
+            addresses.plasma.root.Registry
+        ),
+        DepositManager: new web3.eth.Contract(
+            require(`../matic/build/contracts/DepositManager.json`).abi,
+            addresses.plasma.root.DepositManagerProxy
+        )
     }
 }
 
@@ -160,6 +170,21 @@ function approvals(network = 'main') {
     ])
 }
 
+function getPredicateHelper(artifact) {
+    return new web3.eth.Contract(
+        require(`../build/contracts/${artifact}.json`).abi,
+        addresses.predicate.helpers[artifact]
+    )
+}
+
+async function getOICashContract(network = 'main') {
+    if (!artifacts[network].OICash) {
+        const OICashAddress = await artifacts[network].universe.methods.openInterestCash().call();
+        artifacts[network].OICash = new web3.eth.Contract(abis[network].OICash, OICashAddress);
+    }
+    return artifacts[network].OICash
+}
+
 module.exports = {
     createMarket,
     web3,
@@ -171,5 +196,8 @@ module.exports = {
     createOrder,
     nullAddress,
     approvals,
-    MAX_AMOUNT
+    MAX_AMOUNT,
+    gas,
+    getPredicateHelper,
+    getOICashContract
 }
