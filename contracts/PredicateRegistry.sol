@@ -1,7 +1,7 @@
 pragma solidity 0.5.10;
 
 
-contract Registry {
+contract PredicateRegistry {
     struct Market {
         address rootMarket;
         uint256 numOutcomes;

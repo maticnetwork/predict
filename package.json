@@ -5,15 +5,19 @@
   "author": "atvanguard <93arpit@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "truffle": "truffle"
+    "truffle": "truffle",
+    "test": "mocha"
   },
   "dependencies": {
     "0x.js": "^7.0.2",
     "@maticnetwork/eth-decoder": "^0.0.2",
+    "@openzeppelin/contracts": "^2.4.0",
     "async-file": "^2.0.2",
+    "matic-protocol": "maticnetwork/contracts#5b8c4993b83a075ef8a91b28810f528ddc2b7689",
     "web3": "^1.2.4"
   },
   "devDependencies": {
+    "mocha": "^6.2.2",
     "truffle": "^5.1.2"
   }
 }
