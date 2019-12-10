@@ -13,7 +13,7 @@
     "@maticnetwork/eth-decoder": "^0.0.2",
     "@openzeppelin/contracts": "^2.4.0",
     "async-file": "^2.0.2",
-    "matic-protocol": "maticnetwork/contracts#5b8c4993b83a075ef8a91b28810f528ddc2b7689",
+    "matic-protocol": "atvanguard/contracts#d8cf2444713af700de6030fd4721a430fe36f28d",
     "web3": "^1.2.4"
   },
   "devDependencies": {

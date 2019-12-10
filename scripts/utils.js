@@ -188,6 +188,7 @@ async function getOICashContract(network = 'main') {
 module.exports = {
     createMarket,
     web3,
+    networks,
     accounts, from, otherAccount,
     abis,
     addresses,
