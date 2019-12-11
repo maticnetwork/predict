@@ -1,8 +1,10 @@
 const assert = require('assert');
 const { readFile } = require('async-file')
+const ethUtils = require('ethereumjs-util')
 
 const utils = require('../scripts/utils')
 const { artifacts, abis, web3, otherAccount, from, gas } = utils
+const checkpointUtils = require('./helpers/checkpointUtils')
 
 describe('Predicate', function() {
     it('trade', async function() {
@@ -37,7 +39,7 @@ describe('Predicate', function() {
         console.log(`Amount remaining from fill: ${amountRemaining}`);
         assert.equal(amountRemaining, fillAmount - amount)
         let tradeTx = await trade.send({ from: otherAccount, gas: 5000000, value: web3.utils.toWei('.01') });
-        // console.log('tradeTx', tradeTx)
+        const tradeReceipt = await utils.networks.matic.web3.eth.getTransactionReceipt(tradeTx.transactionHash)
 
         let filledAmount = Math.min(amount, fillAmount)
         assert.equal(
@@ -70,16 +72,25 @@ describe('Predicate', function() {
         // 1. Initialize exit
         const { exitShareToken, exitCashToken } = await initializeExit(marketAddress)
 
-        const exitId = await artifacts.predicate.augurPredicate.methods.getExitId(marketAddress, otherAccount).call()
-
-        console.log({ exitShareToken: exitShareToken.options.address, exitCashToken: exitCashToken.options.address})
-
         // 2. Provide proof of self and counterparty share balance
-        await artifacts.predicate.augurPredicate.methods
-            .claimBalanceFaucet(from, marketAddress, 1, filledAmount).send({ from: otherAccount, gas })
-        await artifacts.predicate.augurPredicate.methods
-            .claimBalanceFaucet(otherAccount, marketAddress, 0, filledAmount).send({ from: otherAccount, gas })
-        // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...
+        let input = await checkpointUtils.checkpoint(tradeReceipt);
+        // Proof of balance of counterparty having shares of outcome 1
+        input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
+        let claimBalance = await artifacts.predicate.augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        assert.equal(
+          await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
+          filledAmount
+        )
+
+        // Proof of exitor's share balance of outcome 0
+        input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, otherAccount, marketAddress, 0)
+        claimBalance = await artifacts.predicate.augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        assert.equal(
+          await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
+          filledAmount
+        )
+
+        // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
         await artifacts.predicate.augurPredicate.methods
             .claimBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
 
@@ -87,6 +98,7 @@ describe('Predicate', function() {
             .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures, otherAccount)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
 
+        // assert that balances were reflected on chain
         assert.equal(
             await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
             filledAmount - amount
@@ -95,6 +107,8 @@ describe('Predicate', function() {
             await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
             filledAmount - amount
         )
+        assert.equal(await exitCashToken.methods.balanceOf(from).call(), 20790 /* 300 * 70 - fee */);
+        assert.equal(await exitCashToken.methods.balanceOf(otherAccount).call(), 8910 /* 300 * 30 - fee */);
     });
 });
 
@@ -149,4 +163,24 @@ async function deployCash() {
         data: '0x' + bytecode.toString('hex')
     })
     .send({ from: otherAccount, gas: 7500000 })
+}
+
+function filterShareTokenBalanceChangedEvent(logs, account, market, outcome) {
+    const indexes = []
+    account = account.slice(2).toLowerCase()
+    market = market.slice(2).toLowerCase()
+    logs.filter((log, i) => {
+        if (
+            log.topics[0].toLowerCase() === '0x350ea32dc29530b9557420816d743c436f8397086f98c96292138edd69e01cb3' // ShareTokenBalanceChanged
+            && log.topics[2].slice(26).toLowerCase() === account
+            && log.topics[3].slice(26).toLowerCase() === market
+            && web3.utils.toBN(log.data.slice(2, 66), 16).eq(web3.utils.toBN(outcome))
+        ) {
+            indexes.push(i);
+            return true;
+        }
+        return false;
+    })
+    assert.equal(indexes.length, 1)
+    return indexes[0]
 }

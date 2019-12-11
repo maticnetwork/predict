@@ -7,10 +7,10 @@ const utils = require('../scripts/utils')
 module.exports = async function(deployer) {
     const registry = await Registry.deployed()
 
-    // some registry related initializations
+    // initializations
     await utils.artifacts.predicate.augurPredicate
         .methods
-        .setRegistry(Registry.address)
+        .initialize2(Registry.address, utils.addresses.plasma.root.WithdrawManagerProxy)
         .send({ from: utils.from, gas: 1000000 });
     assert.equal(Registry.address, await utils.artifacts.predicate.augurPredicate.methods.registry().call())
 

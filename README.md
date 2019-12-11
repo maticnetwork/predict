@@ -53,11 +53,7 @@ Back to home directory of the project for each of the following:
 **1. Matic contracts**
 ```
 cd matic
-npm run truffle:compile
-npm run truffle:migrate -- --reset --to 3 --network development
-npm run truffle:migrate -- --reset -f 4 --to 4 --network matic_dev
-npm run truffle:migrate -- -f 5 --to 5 --network development
-mv contractAddresses.json ../output/addresses.plasma.json
+bash deploy-plasma.sh
 ```
 **2. Main and Matic Augur**
 ```
@@ -91,8 +87,7 @@ yarn truffle compile
 yarn truffle migrate --reset
 ```
 
-### Run Script
+### Run Tests
 ```
-node scripts/zeroXTrade.js
-node scripts/predicateTrade.js
+npm test
 ```

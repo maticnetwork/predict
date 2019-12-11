@@ -64,12 +64,22 @@ const artifacts = {
         DepositManager: new web3.eth.Contract(
             require(`../matic/build/contracts/DepositManager.json`).abi,
             addresses.plasma.root.DepositManagerProxy
+        ),
+        WithdrawManager: new web3.eth.Contract(
+          require(`../matic/build/contracts/WithdrawManager.json`).abi,
+          addresses.plasma.root.WithdrawManagerProxy
+        ),
+        RootChain: new web3.eth.Contract(
+            require(`../matic/build/contracts/RootChain.json`).abi,
+            addresses.plasma.root.RootChain
         )
     }
 }
 
-const _abis = ['FillOrder', 'ZeroXTrade', 'ZeroXExchange'].map(k => abis.predicate[k])
-artifacts.predicate.logDecoder = new LogDecoder(_abis)
+const _abis = ['FillOrder', 'ZeroXTrade', 'ZeroXExchange', 'Augur']
+const predicateAbis = _abis.concat(['AugurPredicate'])
+artifacts.matic.logDecoder = new LogDecoder(_abis.map(k => abis.matic[k]))
+artifacts.predicate.logDecoder = new LogDecoder(predicateAbis.map(k => abis.predicate[k]))
 
 async function createMarket(options, network = 'main') {
     const _artifacts = artifacts[network]
