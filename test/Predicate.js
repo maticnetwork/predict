@@ -8,12 +8,53 @@ const checkpointUtils = require('./helpers/checkpointUtils')
 const augurPredicate = artifacts.predicate.augurPredicate
 
 describe('Predicate', function() {
+    const amount = 100000
+
+    it('deposit', async function() {
+        // const amount = web3.utils.toWei('1');
+        // const amount = 100000
+        // main chain cash (dai)
+        const cash = utils.artifacts.main.cash;
+
+        const deposits = utils.getPredicateHelper('Deposits')
+        await Promise.all([
+            // need cash on the main chain to be able to deposit
+            cash.methods.faucet(amount).send({ from, gas }),
+            cash.methods.faucet(amount).send({ from: otherAccount, gas }),
+            cash.methods.approve(deposits.options.address, amount).send({ from, gas }),
+            cash.methods.approve(deposits.options.address, amount).send({ from: otherAccount, gas })
+        ])
+
+        const OICash = await utils.getOICashContract('main')
+        const depositManager = utils.artifacts.plasma.DepositManager.options.address
+        const beforeBalance = await OICash.methods.balanceOf(depositManager).call()
+
+        await Promise.all([
+            deposits.methods.deposit(amount).send({ from, gas }),
+            deposits.methods.deposit(amount).send({ from: otherAccount, gas })
+        ])
+        // deposit contract has OI cash balance for the 2 accounts
+        assert.equal(
+            await OICash.methods.balanceOf(depositManager).call(),
+            web3.utils.toBN(beforeBalance).add(web3.utils.toBN(amount).mul(web3.utils.toBN(2)))
+        )
+    });
+
+    it('deposit on Matic', async function() {
+        // This task is otherwise managed by Heimdall (our PoS layer)
+        // mocking this step
+        const cash = utils.artifacts.matic.cash;
+        await Promise.all([
+            cash.methods.faucet(amount).send({ from, gas }),
+            cash.methods.faucet(amount).send({ from: otherAccount, gas })
+        ])
+    });
+
     it('trade', async function() {
         const { currentTime, numTicks, marketAddress, rootMarket } = await setup()
-        const _artifacts = artifacts.matic
-        const zeroXTrade = _artifacts.zeroXTrade
-        const cash = _artifacts.cash.methods
-        const shareToken = _artifacts.shareToken
+        const zeroXTrade = utils.artifacts.matic.zeroXTrade
+        const cash = utils.artifacts.matic.cash.methods
+        const shareToken = utils.artifacts.matic.shareToken
 
         // do trades on child chain
         // Make an order for 1000 attoShares
@@ -24,15 +65,16 @@ describe('Predicate', function() {
             from
         )
         const fillAmount = 1200
+
         const creatorCost = amount * price;
         const fillerCost = fillAmount * (numTicks - price);
-        // mocking this step to just using faucet for now (@todo fix)
-        await cash.faucet(creatorCost).send({ from, gas })
-        await cash.faucet(fillerCost).send({ from: otherAccount, gas })
+        let fromBalance = await cash.balanceOf(from).call()
+        console.log('fromBalance', fromBalance)
+        let otherBalance = await cash.balanceOf(otherAccount).call()
+        assert.ok(fromBalance >= creatorCost, 'Creator has insufficient balance')
+        assert.ok(otherBalance >= fillerCost, 'Filler has insufficient balance')
 
         await utils.approvals('matic');
-        let fromBalance = await cash.balanceOf(from).call()
-        let otherBalance = await cash.balanceOf(otherAccount).call()
 
         console.log(`Filling Zero X Order`);
         let trade = zeroXTrade.methods.trade(fillAmount, affiliateAddress, tradeGroupId, orders, signatures);
@@ -51,6 +93,7 @@ describe('Predicate', function() {
             await shareToken.methods.balanceOfMarketOutcome(marketAddress, 0, otherAccount).call(),
             filledAmount
         )
+        console.log(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
         assert.equal(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
         assert.equal(await cash.balanceOf(otherAccount).call(), otherBalance - filledAmount * (numTicks - price))
 
@@ -67,7 +110,7 @@ describe('Predicate', function() {
         _orders.push(orders[0])
         _signatures.push(signatures[0])
 
-        // This trade was created, however the filler was being censored, so they seek consolation from the predicate
+        // The following trade was created, however the filler was being censored, so they seek consolation from the predicate
         // await zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
 
         // 1. Initialize exit
