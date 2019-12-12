@@ -66,7 +66,7 @@ yarn deploy:local:matic > ../../../output/deploy.matic
 
 **3. Augur Predicate**
 ```
-cd augur/packages/augur-core
+cd predicate/packages/augur-core
 source venv/bin/activate
 node -r ts-node/register source/deployment/compileContracts.ts
 yarn deploy:local > ../../../output/deploy.predicate
@@ -75,9 +75,7 @@ yarn deploy:local > ../../../output/deploy.predicate
 ### E. Parse contract addresses
 Back to home directory of the project
 ```
-node utils/addressClipper.js deploy.main addresses.main.json
-node utils/addressClipper.js deploy.matic addresses.matic.json
-node utils/addressClipper.js deploy.predicate addresses.predicate.json
+bash utils/clipAddresses.sh
 ```
 
 ### F. Deploy helper contracts
@@ -87,7 +85,7 @@ yarn truffle compile
 yarn truffle migrate --reset
 ```
 
-### Run Tests
+### G. Run Tests
 ```
 npm test
 ```

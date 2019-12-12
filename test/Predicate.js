@@ -5,6 +5,7 @@ const ethUtils = require('ethereumjs-util')
 const utils = require('../scripts/utils')
 const { artifacts, abis, web3, otherAccount, from, gas } = utils
 const checkpointUtils = require('./helpers/checkpointUtils')
+const augurPredicate = artifacts.predicate.augurPredicate
 
 describe('Predicate', function() {
     it('trade', async function() {
@@ -70,13 +71,13 @@ describe('Predicate', function() {
         // await zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
 
         // 1. Initialize exit
-        const { exitShareToken, exitCashToken } = await initializeExit(marketAddress)
+        const { exitShareToken, exitCashToken } = await initializeExit(otherAccount)
 
         // 2. Provide proof of self and counterparty share balance
         let input = await checkpointUtils.checkpoint(tradeReceipt);
         // Proof of balance of counterparty having shares of outcome 1
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
-        let claimBalance = await artifacts.predicate.augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        let claimBalance = await augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
           filledAmount
@@ -84,17 +85,17 @@ describe('Predicate', function() {
 
         // Proof of exitor's share balance of outcome 0
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, otherAccount, marketAddress, 0)
-        claimBalance = await artifacts.predicate.augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        claimBalance = await augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
           filledAmount
         )
 
         // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
-        await artifacts.predicate.augurPredicate.methods
+        await augurPredicate.methods
             .claimBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
 
-        trade = await artifacts.predicate.augurPredicate.methods
+        trade = await augurPredicate.methods
             .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures, otherAccount)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
 
@@ -110,6 +111,20 @@ describe('Predicate', function() {
         assert.equal(await exitCashToken.methods.balanceOf(from).call(), 20790 /* 300 * 70 - fee */);
         assert.equal(await exitCashToken.methods.balanceOf(otherAccount).call(), 8910 /* 300 * 30 - fee */);
     });
+
+    it('startExit', async function() {
+        let startExit = await augurPredicate.methods.startExit().send({ from: otherAccount, gas })
+        startExit = await web3.eth.getTransactionReceipt(startExit.transactionHash)
+        const exitLog = startExit.logs[1]
+        assert.equal(
+            exitLog.topics[0],
+            '0xaa5303fdad123ab5ecaefaf69137bf8632257839546d43a3b3dd148cc2879d6f' // ExitStarted
+        )
+        assert.equal(
+            exitLog.topics[1].slice(26).toLowerCase(),
+            otherAccount.slice(2).toLowerCase(), // exitor
+        )
+    })
 });
 
 async function setup() {
@@ -134,13 +149,13 @@ async function setup() {
     return { numTicks, marketAddress, currentTime, rootMarket }
 }
 
-async function initializeExit(marketAddress) {
+async function initializeExit(account) {
     // For Exiting, we need a new version of shareToken and Cash
     // This should be done by the predicate, but this is a temporary solution to work around bytecode too long (@todo fix)
     const exitShareToken = await deployShareToken();
     const exitCashToken = await deployCash();
-    const initializeForExit = await artifacts.predicate.augurPredicate.methods.initializeForExit(
-        marketAddress, exitShareToken.options.address, exitCashToken.options.address).send({ from: otherAccount, gas })
+    const initializeForExit = await augurPredicate.methods.initializeForExit(
+        exitShareToken.options.address, exitCashToken.options.address).send({ from: account, gas })
     // console.log('initializeForExit', JSON.stringify(initializeForExit, null, 2))
     return { exitShareToken, exitCashToken }
 }
