@@ -93,7 +93,7 @@ describe('Predicate', function() {
             await shareToken.methods.balanceOfMarketOutcome(marketAddress, 0, otherAccount).call(),
             filledAmount
         )
-        console.log(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
+        // console.log(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
         assert.equal(await cash.balanceOf(from).call(), fromBalance - filledAmount * price)
         assert.equal(await cash.balanceOf(otherAccount).call(), otherBalance - filledAmount * (numTicks - price))
 
@@ -114,13 +114,19 @@ describe('Predicate', function() {
         // await zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
 
         // 1. Initialize exit
+        await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
         const { exitShareToken, exitCashToken } = await initializeExit(otherAccount)
-
+        const exitId = await augurPredicate.methods.getExitId(otherAccount).call()
+        // console.log(
+        //     exitShareToken.options.address,
+        //     exitCashToken.options.address,
+        //     await augurPredicate.methods.lookupExit(exitId).call()
+        // )
         // 2. Provide proof of self and counterparty share balance
         let input = await checkpointUtils.checkpoint(tradeReceipt);
         // Proof of balance of counterparty having shares of outcome 1
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
-        let claimBalance = await augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        let claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
           filledAmount
@@ -128,7 +134,7 @@ describe('Predicate', function() {
 
         // Proof of exitor's share balance of outcome 0
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, otherAccount, marketAddress, 0)
-        claimBalance = await augurPredicate.methods.claimBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
           filledAmount
@@ -136,7 +142,7 @@ describe('Predicate', function() {
 
         // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
         await augurPredicate.methods
-            .claimBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
+            .claimShareBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
 
         trade = await augurPredicate.methods
             .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures, otherAccount)
@@ -168,6 +174,13 @@ describe('Predicate', function() {
             otherAccount.slice(2).toLowerCase(), // exitor
         )
     })
+
+    // it('onFinalizeExit', async function() {
+    //     const rootOICash = await utils.getOICashContract('main')
+    //     console.log(
+    //         await utils.artifacts.plasma.WithdrawManager.methods.processExits(rootOICash.options.address).send({ from, gas })
+    //     )
+    // })
 });
 
 async function setup() {

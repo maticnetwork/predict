@@ -9,18 +9,20 @@ module.exports = async function(deployer) {
 
     const rootOICash = await utils.getOICashContract('main')
     const maticOICash = await utils.getOICashContract('matic')
-
     // Matic initializations
     await utils.artifacts.plasma.Registry.methods.mapToken(
         rootOICash.options.address,
         maticOICash.options.address,
         false /* _isERC721 */
     ).send({ from: utils.from, gas: utils.gas })
-
-    await utils.artifacts.plasma.Registry.methods.addPredicate(
-        utils.addresses.predicate.AugurPredicate,
-        3 /* Type.Custom */
-    ).send({ from: utils.from, gas: utils.gas })
+    if (
+        await utils.artifacts.plasma.Registry.methods.predicates(utils.artifacts.predicate.augurPredicate.options.address).call() == 0
+    ) {
+        await utils.artifacts.plasma.Registry.methods.addPredicate(
+            utils.addresses.predicate.AugurPredicateTest,
+            3 /* Type.Custom */
+        ).send({ from: utils.from, gas: utils.gas })
+    }
 
     assert.equal(
         await utils.artifacts.plasma.Registry.methods.predicates(

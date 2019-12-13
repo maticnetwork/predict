@@ -87,5 +87,5 @@ yarn truffle migrate --reset
 
 ### G. Run Tests
 ```
-npm test
+yarn test
 ```

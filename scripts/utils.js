@@ -32,7 +32,7 @@ let from = accounts[0]
 let otherAccount = accounts[1]
 const nullAddress = '0x0000000000000000000000000000000000000000'
 const MAX_AMOUNT = '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe'
-const gas = 2000000
+const gas = 5000000
 
 const artifacts = {
     main: {
@@ -52,7 +52,7 @@ const artifacts = {
         ZeroXExchange: new childWeb3.eth.Contract(abis.main.ZeroXExchange, addresses.matic.ZeroXExchange)
     },
     predicate: {
-        augurPredicate: new web3.eth.Contract(abis.predicate.AugurPredicate, addresses.predicate.AugurPredicate),
+        augurPredicate: new web3.eth.Contract(abis.predicate.AugurPredicateTest, addresses.predicate.AugurPredicateTest),
         zeroXTrade: new web3.eth.Contract(abis.predicate.ZeroXTrade, addresses.predicate.ZeroXTrade),
         ZeroXExchange: new web3.eth.Contract(abis.predicate.ZeroXExchange, addresses.predicate.ZeroXExchange)
     },
