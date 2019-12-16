@@ -36,12 +36,21 @@ module.exports = async function(deployer) {
         .initializeForMatic(
             predicateRegistry.address,
             utils.addresses.plasma.root.WithdrawManagerProxy,
-            rootOICash.options.address
+            utils.addresses.plasma.root.DepositManagerProxy,
+            rootOICash.options.address,
+            // utils.artifacts.main.cash.options.address,
+            utils.artifacts.main.augur.options.address,
+            // utils.artifacts.main.augurTrading.options.address
         )
         .send({ from: utils.from, gas: 1000000 });
-    assert.equal(await utils.artifacts.predicate.augurPredicate.methods.registry().call(), predicateRegistry.address)
+    assert.equal(await utils.artifacts.predicate.augurPredicate.methods.predicateRegistry().call(), predicateRegistry.address)
     assert.equal(await utils.artifacts.predicate.augurPredicate.methods.withdrawManager().call(), utils.addresses.plasma.root.WithdrawManagerProxy)
-
+    console.log(
+        'yoyo',
+        await utils.artifacts.predicate.augurPredicate.methods.augurCash().call(),
+        await utils.artifacts.main.universe.methods.cash().call(),
+        utils.artifacts.main.cash.options.address
+    )
     await utils.artifacts.predicate.zeroXTrade.methods
         .setRegistry(predicateRegistry.address)
         .send({ from: utils.from, gas: 1000000 });

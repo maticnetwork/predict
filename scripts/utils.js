@@ -38,6 +38,7 @@ const artifacts = {
     main: {
         shareToken: new web3.eth.Contract(abis.main.ShareToken, addresses.main.ShareToken),
         augur: new web3.eth.Contract(abis.main.Augur, addresses.main.Augur),
+        augurTrading: new web3.eth.Contract(abis.main.AugurTrading, addresses.main.AugurTrading),
         cash: new web3.eth.Contract(abis.main.Cash, addresses.main.Cash),
         universe: new web3.eth.Contract(abis.main.Universe, addresses.main.Universe),
         zeroXTrade: new web3.eth.Contract(abis.main.ZeroXTrade, addresses.main.ZeroXTrade),

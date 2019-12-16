@@ -11,18 +11,21 @@ describe('Predicate', function() {
     const amount = 100000
 
     it('deposit', async function() {
-        // const amount = web3.utils.toWei('1');
-        // const amount = 100000
         // main chain cash (dai)
         const cash = utils.artifacts.main.cash;
 
-        const deposits = utils.getPredicateHelper('Deposits')
+        const predicate = utils.artifacts.predicate.augurPredicate
+        console.log(
+            'yoyo 2',
+            await predicate.methods.augurCash().call(),
+            cash.options.address
+        )
         await Promise.all([
             // need cash on the main chain to be able to deposit
             cash.methods.faucet(amount).send({ from, gas }),
             cash.methods.faucet(amount).send({ from: otherAccount, gas }),
-            cash.methods.approve(deposits.options.address, amount).send({ from, gas }),
-            cash.methods.approve(deposits.options.address, amount).send({ from: otherAccount, gas })
+            cash.methods.approve(predicate.options.address, amount).send({ from, gas }),
+            cash.methods.approve(predicate.options.address, amount).send({ from: otherAccount, gas })
         ])
 
         const OICash = await utils.getOICashContract('main')
@@ -30,8 +33,8 @@ describe('Predicate', function() {
         const beforeBalance = await OICash.methods.balanceOf(depositManager).call()
 
         await Promise.all([
-            deposits.methods.deposit(amount).send({ from, gas }),
-            deposits.methods.deposit(amount).send({ from: otherAccount, gas })
+            predicate.methods.deposit(amount).send({ from, gas }),
+            predicate.methods.deposit(amount).send({ from: otherAccount, gas })
         ])
         // deposit contract has OI cash balance for the 2 accounts
         assert.equal(
@@ -228,7 +231,7 @@ async function deployShareToken() {
 
 async function deployCash() {
     const compilerOutput = JSON.parse(await readFile(abis.predicate_contracts_output, 'utf8'));
-    const bytecode = Buffer.from(compilerOutput.contracts['Cash.sol']['Cash'].evm.bytecode.object, 'hex');
+    const bytecode = Buffer.from(compilerOutput.contracts['matic/PredicateCash.sol']['PredicateCash'].evm.bytecode.object, 'hex');
     const cash = new web3.eth.Contract(abis.predicate.Cash);
     return cash.deploy({ // returns new contract instance
         data: '0x' + bytecode.toString('hex')
