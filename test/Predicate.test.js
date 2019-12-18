@@ -13,13 +13,8 @@ describe('Predicate', function() {
     it('deposit', async function() {
         // main chain cash (dai)
         const cash = utils.artifacts.main.cash;
-
+        this.cash = cash
         const predicate = utils.artifacts.predicate.augurPredicate
-        console.log(
-            'yoyo 2',
-            await predicate.methods.augurCash().call(),
-            cash.options.address
-        )
         await Promise.all([
             // need cash on the main chain to be able to deposit
             cash.methods.faucet(amount).send({ from, gas }),
@@ -29,7 +24,7 @@ describe('Predicate', function() {
         ])
 
         const OICash = await utils.getOICashContract('main')
-        const depositManager = utils.artifacts.plasma.DepositManager.options.address
+        this.rootOICash = OICash
         const beforeBalance = await OICash.methods.balanceOf(predicate.options.address).call()
 
         await Promise.all([
@@ -56,6 +51,7 @@ describe('Predicate', function() {
     it('trade', async function() {
         const { currentTime, numTicks, marketAddress, rootMarket } = await setup()
         this.rootMarket = rootMarket
+        this.childMarketAddress = marketAddress
         const zeroXTrade = utils.artifacts.matic.zeroXTrade
         const cash = utils.artifacts.matic.cash.methods
         const shareToken = utils.artifacts.matic.shareToken
@@ -165,64 +161,78 @@ describe('Predicate', function() {
         assert.equal(await exitCashToken.methods.balanceOf(otherAccount).call(), 8910 /* 300 * 30 - fee */);
     });
 
-    it('processExitForMarket', async function() {
-        const exitId = await augurPredicate.methods.getExitId(otherAccount).call()
-        let processExit = await augurPredicate.methods
-            .processExitForMarketHelper(this.rootMarket.options.address, otherAccount, exitId)
-            .call({ from: otherAccount })
-        console.log('processExit', processExit)
-        const numOutcomes = parseInt(await this.rootMarket.methods.getNumberOfOutcomes().call())
-        for(let i = 0; i < numOutcomes; i++) {
-            console.log(
-                await artifacts.main.shareToken.methods.balanceOfMarketOutcome(this.rootMarket.options.address, i, augurPredicate.options.address).call()
-            )
-        }
-        const OICash = await utils.getOICashContract('main')
-        console.log('oi address', await OICash.options.address, await OICash.methods.universe().call())
-        console.log('oi balance', await OICash.methods.balanceOf(augurPredicate.options.address).call())
-        const buyCompleteSets = await augurPredicate.methods
-            // .buyCompleteSets(this.rootMarket.options.address, 700)
-            .processExitForMarketTest(this.rootMarket.options.address, otherAccount, exitId)
-            .send({ from: otherAccount, gas })
-            // .processExitForMarketTest(this.rootMarket.options.address, otherAccount, exitId)
-        console.log('buyCompleteSets', JSON.stringify(buyCompleteSets, null, 2))
-        for(let i = 0; i < numOutcomes; i++) {
-            console.log(
-                await artifacts.main.shareToken.methods.balanceOfMarketOutcome(this.rootMarket.options.address, i, augurPredicate.options.address).call(),
-                await artifacts.main.shareToken.methods.balanceOfMarketOutcome(this.rootMarket.options.address, i, otherAccount).call()
-            )
-        }
-        console.log('oi balance', await OICash.methods.balanceOf(augurPredicate.options.address).call())
+    it('startExit (otherAccount)', async function() {
+        // otherAccount is starting an exit for 700 shares of outcome 0 and 2 (balance from tests above)
+        let startExit = await augurPredicate.methods.startExit().send({ from: otherAccount, gas })
+        startExit = await web3.eth.getTransactionReceipt(startExit.transactionHash)
+        const exitLog = startExit.logs[1]
+        assert.equal(
+            exitLog.topics[0],
+            '0xaa5303fdad123ab5ecaefaf69137bf8632257839546d43a3b3dd148cc2879d6f' // ExitStarted
+        )
+        assert.equal(
+            exitLog.topics[1].slice(26).toLowerCase(),
+            otherAccount.slice(2).toLowerCase(), // exitor
+        )
     })
 
-    // it('to OICash', async function() {
-    //     // main chain cash (dai)
-    //     const cash = utils.artifacts.main.cash;
-    //     await cash.methods.faucet(amount).send({ from, gas })
-    //     await cash.methods.approve(utils.addresses.main.Augur, amount).send({ from, gas })
-    //     const OICash = await utils.getOICashContract('main')
-    //     await OICash.methods.transfer('0x0000000000000000000000000000000000000001', await OICash.methods.balanceOf(from).call()).send({ from, gas })
-    //     console.log('oi balance', await OICash.methods.balanceOf(from).call())
-    //     await OICash.methods.deposit(amount).send({ from, gas })
-    //     console.log('oi balance', await OICash.methods.balanceOf(from).call())
-    //     console.log('oi address', await OICash.options.address, await OICash.methods.universe().call())
+    it('onFinalizeExit (calls processExitForMarket)', async function() {
+        const beforeOIBalancePredicate = await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()
 
-    //     // const { currentTime, numTicks, marketAddress, rootMarket } = await setup()
-    //     const numOutcomes = parseInt(await this.rootMarket.methods.getNumberOfOutcomes().call())
-    //     for(let i = 0; i < numOutcomes; i++) {
-    //         console.log(
-    //             await artifacts.main.shareToken.methods.balanceOfMarketOutcome(this.rootMarket.options.address, i, from).call()
-    //         )
-    //     }
-    //     const buyCompleteSets = await OICash.methods.buyCompleteSets(this.rootMarket.options.address, 700).send({ from, gas })
-    //     console.log('buyCompleteSets', JSON.stringify(buyCompleteSets, null, 2))
-    //     for(let i = 0; i < numOutcomes; i++) {
-    //         console.log(
-    //             await artifacts.main.shareToken.methods.balanceOfMarketOutcome(this.rootMarket.options.address, i, from).call()
-    //         )
-    //     }
-    //     console.log('oi balance', await OICash.methods.balanceOf(from).call())
-    // });
+        const processExit = await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
+        // console.log(JSON.stringify(processExit, null, 2))
+
+        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, otherAccount, [700, 0, 700])
+        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 700, 0])
+        assert.equal(
+            await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call(),
+            beforeOIBalancePredicate - (700 * 100) // predicate bought 700 complete sets
+        )
+    })
+
+    it('startExit (for from) (uses claimShareBalanceFaucet)', async function() {
+        await augurPredicate.methods.clearExit(from).send({ from, gas })
+        const { exitShareToken, exitCashToken } = await initializeExit(from)
+        await augurPredicate.methods
+            .claimShareBalanceFaucet(from, this.childMarketAddress, 1, 700)
+            .send({ from, gas })
+        await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, 700, 0])
+        let startExit = await augurPredicate.methods.startExit().send({ from, gas })
+        startExit = await web3.eth.getTransactionReceipt(startExit.transactionHash)
+        const exitLog = startExit.logs[1]
+        assert.equal(
+            exitLog.topics[0],
+            '0xaa5303fdad123ab5ecaefaf69137bf8632257839546d43a3b3dd148cc2879d6f' // ExitStarted
+        )
+        assert.equal(
+            exitLog.topics[1].slice(26).toLowerCase(),
+            from.slice(2).toLowerCase(), // exitor
+        )
+    })
+
+    it('onFinalizeExit (calls processExitForFinalizedMarket)', async function() {
+        await utils.finalizeMarket(this.rootMarket)
+
+        // Note that OICash balance for predicate will not be affected
+        // Predicate will redeem the winning shares, have it deposited directly to OICash and then withdraw that OICash
+        const beforeOIBalancePredicate = await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()
+        const beforeCashBalance = await this.cash.methods.balanceOf(from).call()
+
+        const processExit = await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
+        // console.log(JSON.stringify(processExit, null, 2))
+
+        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 0, 0])
+        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, from, [0, 0, 0])
+        assert.equal(
+            await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call(),
+            beforeOIBalancePredicate
+        )
+        assert.equal(
+            await this.cash.methods.balanceOf(from).call(),
+            parseInt(beforeCashBalance, 10) + (700 * 100) - 7 // fee
+        )
+    })
+
 });
 
 async function setup() {
@@ -269,7 +279,7 @@ async function deployShareToken() {
 
 async function deployCash() {
     const compilerOutput = JSON.parse(await readFile(abis.predicate_contracts_output, 'utf8'));
-    const bytecode = Buffer.from(compilerOutput.contracts['matic/PredicateCash.sol']['PredicateCash'].evm.bytecode.object, 'hex');
+    const bytecode = Buffer.from(compilerOutput.contracts['Cash.sol']['Cash'].evm.bytecode.object, 'hex');
     const cash = new web3.eth.Contract(abis.predicate.Cash);
     return cash.deploy({ // returns new contract instance
         data: '0x' + bytecode.toString('hex')
@@ -295,4 +305,13 @@ function filterShareTokenBalanceChangedEvent(logs, account, market, outcome) {
     })
     assert.equal(indexes.length, 1)
     return indexes[0]
+}
+
+async function assertTokenBalances(shareToken, market, account, balances) {
+    for(let i = 0; i < balances.length; i++) {
+        assert.equal(
+            await shareToken.methods.balanceOfMarketOutcome(market, i, account).call(),
+            balances[i]
+        )
+    }
 }
