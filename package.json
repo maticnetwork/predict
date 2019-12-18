@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "truffle": "truffle",
-    "test": "mocha test/Predicate.js --timeout 0"
+    "test": "mocha test/Predicate.test.js --timeout 0"
   },
   "dependencies": {
     "0x.js": "^7.0.2",

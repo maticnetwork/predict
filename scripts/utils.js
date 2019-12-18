@@ -38,10 +38,12 @@ const artifacts = {
     main: {
         shareToken: new web3.eth.Contract(abis.main.ShareToken, addresses.main.ShareToken),
         augur: new web3.eth.Contract(abis.main.Augur, addresses.main.Augur),
+        augurTrading: new web3.eth.Contract(abis.main.AugurTrading, addresses.main.AugurTrading),
         cash: new web3.eth.Contract(abis.main.Cash, addresses.main.Cash),
         universe: new web3.eth.Contract(abis.main.Universe, addresses.main.Universe),
         zeroXTrade: new web3.eth.Contract(abis.main.ZeroXTrade, addresses.main.ZeroXTrade),
-        ZeroXExchange: new web3.eth.Contract(abis.main.ZeroXExchange, addresses.main.ZeroXExchange)
+        ZeroXExchange: new web3.eth.Contract(abis.main.ZeroXExchange, addresses.main.ZeroXExchange),
+        Time: new web3.eth.Contract(abis.main.TimeControlled, addresses.main.TimeControlled)
     },
     matic: {
         shareToken: new childWeb3.eth.Contract(abis.main.ShareToken, addresses.matic.ShareToken),
@@ -54,7 +56,8 @@ const artifacts = {
     predicate: {
         augurPredicate: new web3.eth.Contract(abis.predicate.AugurPredicateTest, addresses.predicate.AugurPredicateTest),
         zeroXTrade: new web3.eth.Contract(abis.predicate.ZeroXTrade, addresses.predicate.ZeroXTrade),
-        ZeroXExchange: new web3.eth.Contract(abis.predicate.ZeroXExchange, addresses.predicate.ZeroXExchange)
+        ZeroXExchange: new web3.eth.Contract(abis.predicate.ZeroXExchange, addresses.predicate.ZeroXExchange),
+        Time: new web3.eth.Contract(abis.predicate.TimeControlled, addresses.predicate.TimeControlled)
     },
     plasma: {
         Registry: new web3.eth.Contract(
@@ -99,11 +102,30 @@ async function createMarket(options, network = 'main') {
     const cash = _artifacts.cash.methods
     await cash.faucet(validityBond).send({ from, gas })
     console.log('getOrCacheValidityBond', validityBond, 'cash balance', await cash.balanceOf(from).call())
-    const endTime = options.currentTime + (30 * DAY)
+    const endTime = options.currentTime + (1 * DAY)
     await cash.approve(addresses[network].Augur, MAX_AMOUNT).send({ from })
     console.log('cash.allowance', await cash.allowance(from, addresses[network].Augur).call())
     const market = await createReasonableYesNoMarket(universe, endTime, from);
     return market
+}
+
+async function setTime(time) {
+    let Time = artifacts.main.Time
+    await Time.methods.setTimestamp(time).send({ from, gas })
+}
+
+async function finalizeMarket(market, network = 'main') {
+    const endTime = await market.methods.getEndTime().call()
+    await setTime(endTime + 1)
+    try {
+        await market.methods.doInitialReport([0, 100, 0], "", 0).send({ from, gas })
+        // set timestamp to after designated dispute end
+        const disputeWindow = new networks[network].web3.eth.Contract(abis.main.DisputeWindow, await market.methods.getDisputeWindow().call())
+        await setTime((await disputeWindow.methods.getEndTime().call()) + 1)
+        await market.methods.finalize().send({ from, gas })
+    } catch(e) {
+        console.log(e)
+    }
 }
 
 async function createReasonableYesNoMarket(universe, endTime, from) {
@@ -210,5 +232,7 @@ module.exports = {
     MAX_AMOUNT,
     gas,
     getPredicateHelper,
-    getOICashContract
+    getOICashContract,
+    finalizeMarket,
+    setTime
 }
