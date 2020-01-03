@@ -75,6 +75,10 @@ const artifacts = {
         RootChain: new web3.eth.Contract(
             require(`../../matic/build/contracts/RootChain.json`).abi,
             addresses.plasma.root.RootChain
+        ),
+        Erc20Predicate: new web3.eth.Contract(
+            require(`../../matic/build/contracts/ERC20Predicate.json`).abi,
+            addresses.plasma.root.predicates.ERC20Predicate
         )
     }
 }
@@ -112,7 +116,6 @@ async function createMarket(options, network = 'main') {
 async function setTime(time) {
     let Time = artifacts.main.Time
     await Time.methods.setTimestamp(time).send({ from, gas })
-    console.log({ Time: time })
 }
 
 async function finalizeMarket(market, network = 'main') {

@@ -36,6 +36,7 @@ module.exports = async function(deployer) {
         .initializeForMatic(
             predicateRegistry.address,
             utils.addresses.plasma.root.WithdrawManagerProxy,
+            utils.addresses.plasma.root.predicates.ERC20Predicate,
             rootOICash.options.address,
             maticOICash.options.address,
             utils.artifacts.main.augur.options.address,
