@@ -5,7 +5,7 @@ const Buffer = require('safe-buffer').Buffer
 const Proofs = require('matic-protocol/contracts-core/helpers/proofs.js')
 const MerkleTree = require('matic-protocol/contracts-core/helpers/merkle-tree.js')
 
-const utils = require('../../scripts/utils')
+const utils = require('./utils')
 const { web3, from, gas } = utils
 const web3Child = utils.networks.matic.web3
 

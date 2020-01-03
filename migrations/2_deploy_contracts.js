@@ -2,7 +2,7 @@ const fs = require('fs')
 
 const PredicateRegistry = artifacts.require('PredicateRegistry');
 
-const utils = require('../scripts/utils')
+const utils = require('../test/helpers/utils')
 
 module.exports = async function(deployer) {
     await deployer.deploy(PredicateRegistry);

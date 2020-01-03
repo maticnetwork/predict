@@ -2,7 +2,7 @@ const assert = require('assert')
 
 const PredicateRegistry = artifacts.require('predicateRegistry');
 
-const utils = require('../scripts/utils')
+const utils = require('../test/helpers/utils')
 
 module.exports = async function(deployer) {
     const predicateRegistry = await PredicateRegistry.deployed()
