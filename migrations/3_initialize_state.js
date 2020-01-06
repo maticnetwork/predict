@@ -56,5 +56,5 @@ module.exports = async function(deployer) {
 
     await predicateRegistry.setZeroXTrade(utils.addresses.matic.ZeroXTrade)
     await predicateRegistry.setRootZeroXTrade(utils.addresses.predicate.ZeroXTrade)
-    await predicateRegistry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange)
+    await predicateRegistry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange, true /* isDefaultExchange */)
 };

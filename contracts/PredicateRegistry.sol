@@ -10,7 +10,12 @@ contract PredicateRegistry {
 
     mapping(address => Market) public childToRootMarket;
     mapping(address => address) public zeroXExchange;
+
+    // matic contracts
     address public zeroXTrade;
+    address public defaultExchange;
+
+    // predicate contracts
     address public rootZeroXTrade;
 
 
@@ -26,7 +31,18 @@ contract PredicateRegistry {
         rootZeroXTrade = _zeroXTrade;
     }
 
-    function setZeroXExchange(address childExchange, address rootExchange) public /* @todo onlyOwner */ {
+    function setZeroXExchange(address childExchange, address rootExchange, bool isDefaultExchange) public /* @todo onlyOwner */ {
         zeroXExchange[childExchange] = rootExchange;
+        if (isDefaultExchange) {
+            defaultExchange = childExchange;
+        }
+    }
+
+    function belongsToStateDeprecationContractSet(address _address) public view returns(bool) {
+        address[2] memory maticContracts = [zeroXTrade, defaultExchange];
+        for (uint8 i = 0; i < maticContracts.length; i++) {
+            if (_address == maticContracts[i]) return true;
+        }
+        return false;
     }
 }
