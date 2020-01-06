@@ -8,7 +8,7 @@ const utils = require('./helpers/utils')
 const { artifacts, abis, web3, otherAccount, from, gas } = utils
 const augurPredicate = artifacts.predicate.augurPredicate
 
-describe('Predicate - claimCashBalance flow', function() {
+describe('verifyDeprecation', function() {
     const amount = 100000
 
     before(async function() {
@@ -189,21 +189,52 @@ describe('Predicate - claimCashBalance flow', function() {
             exitLog.topics[1].slice(26).toLowerCase(),
             otherAccount.slice(2).toLowerCase(), // exitor
         )
-        this.withdrawId = exitLog.topics[2]
+        this.otherAccountWithdrawId = exitLog.topics[2]
     })
 
-    it('verifyDeprecation (calls isValidDeprecation)', async function() {
+    it('startExit (for from) (uses claimShareBalanceFaucet)', async function() {
+        await augurPredicate.methods.clearExit(from).send({ from, gas })
+        const { exitShareToken, exitCashToken } = await initializeExit(from)
+        await augurPredicate.methods
+            .claimShareBalanceFaucet(from, this.childMarketAddress, 1, 1000)
+            .send({ from, gas })
+        await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, 1000, 0])
+        let startExit = await augurPredicate.methods.startExit().send({ from, gas })
+        startExit = await web3.eth.getTransactionReceipt(startExit.transactionHash)
+        const exitLog = startExit.logs[1]
+        assert.equal(
+            exitLog.topics[0],
+            '0xaa5303fdad123ab5ecaefaf69137bf8632257839546d43a3b3dd148cc2879d6f' // ExitStarted
+        )
+        assert.equal(
+            exitLog.topics[1].slice(26).toLowerCase(),
+            from.slice(2).toLowerCase(), // exitor
+        )
+        this.fromWithdrawId = exitLog.topics[2]
+    })
+
+    it('verifyDeprecation', async function() {
         const tradeReceipt = await utils.networks.matic.web3.eth.getTransactionReceipt(this.deprecationTrade.transactionHash)
         let input = await checkpointUtils.checkpoint(tradeReceipt);
-        input.logIndex = 0 // unused
+        input.logIndex = 0 // this is the index of the order signed by the exitor whose exit is being challenged
         const challengeData = checkpointUtils.buildChallengeData(input)
-        // console.log({ challengeData })
-        // const exitPriority = (await augurPredicate.methods.lookupExit(this.exitId).call()).exitPriority
-        // console.log({ withdrawId: this.withdrawId, exitPriority })
-        const challenge = await utils.artifacts.plasma.WithdrawManager.methods
-            .challengeExit(this.withdrawId, 0, challengeData, augurPredicate.options.address)
+        let challenge = await utils.artifacts.plasma.WithdrawManager.methods
+            .challengeExit(this.otherAccountWithdrawId, 0, challengeData, augurPredicate.options.address)
             .send({ from, gas })
-        console.log(JSON.stringify(challenge, null, 2))
+        // console.log(JSON.stringify(challenge, null, 2))
+        assert.equal(
+            challenge.events.ExitCancelled.raw.topics[1],
+            this.otherAccountWithdrawId
+        )
+
+        challenge = await utils.artifacts.plasma.WithdrawManager.methods
+            .challengeExit(this.fromWithdrawId, 0, challengeData, augurPredicate.options.address)
+            .send({ from, gas })
+        // console.log(JSON.stringify(challenge, null, 2))
+        assert.equal(
+            challenge.events.ExitCancelled.raw.topics[1],
+            this.fromWithdrawId
+        )
     })
 });
 

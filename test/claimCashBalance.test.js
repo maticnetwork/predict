@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { readFile } = require('async-file')
 const ethUtils = require('ethereumjs-util')
+const Proofs = require('matic-protocol/contracts-core/helpers/proofs.js')
 
 const checkpointUtils = require('./helpers/checkpointUtils')
 const utils = require('./helpers/utils')
@@ -122,7 +123,10 @@ describe('Predicate - claimCashBalance flow', function() {
         _signatures.push(signatures[0])
 
         // The following trade was created, however the filler was being censored, so they seek consolation from the predicate
-        // await zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
+        this.inFlightTrade = await zeroXTrade.methods
+            .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
+            .send({ from: otherAccount, gas: 5000000, value: web3.utils.toWei('.01') });
+        this.inFlightTrade = ethUtils.bufferToHex(Proofs.getTxBytes(await utils.networks.matic.web3.eth.getTransaction(this.inFlightTrade.transactionHash)))
 
         // 1. Initialize exit
         await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
@@ -153,7 +157,7 @@ describe('Predicate - claimCashBalance flow', function() {
         // await augurPredicate.methods.claimCashBalanceFaucet(cashFaucetAmount, otherAccount).send({ from: otherAccount, gas })
 
         trade = await augurPredicate.methods
-            .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures, otherAccount)
+            .executeTrade(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
         // assert that balances were reflected on chain
         await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, filledAmount - amount, 0])

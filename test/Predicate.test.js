@@ -132,7 +132,7 @@ describe('Predicate - claimShareBalance flow', function() {
             .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
             .send({ from: otherAccount, gas: 5000000, value: web3.utils.toWei('.01') });
         this.inFlightTrade = ethUtils.bufferToHex(Proofs.getTxBytes(await utils.networks.matic.web3.eth.getTransaction(this.inFlightTrade.transactionHash)))
-        console.log({ inFlightTrade: this.inFlightTrade })
+        // console.log({ inFlightTrade: this.inFlightTrade })
 
         // 1. Initialize exit
         await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
