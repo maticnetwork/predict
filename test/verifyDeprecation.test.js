@@ -8,7 +8,7 @@ const utils = require('./helpers/utils')
 const { artifacts, abis, web3, otherAccount, from, gas } = utils
 const augurPredicate = artifacts.predicate.augurPredicate
 
-describe('verifyDeprecation', function() {
+describe('Predicate - verifyDeprecation flow', function() {
     const amount = 100000
 
     before(async function() {
@@ -123,20 +123,23 @@ describe('verifyDeprecation', function() {
         _signatures.push(signatures[0])
 
         // The following trade was created, however the filler was being censored, so they seek consolation from the predicate
-        this.inFlightTrade = await utils.networks.matic.web3.eth.accounts.signTransaction({
-            from: otherAccount,
-            gasPrice: "20000000000",
-            gas: 500000,
+        let txObj = {
+            gas: 5000000,
+            gasPrice: 1,
             to: zeroXTrade.options.address,
             value: web3.utils.toWei('.01'),
+            chainId: 15001,
+            nonce: await utils.networks.matic.web3.eth.getTransactionCount(otherAccount),
             data: zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures).encodeABI()
-        }, '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712')
-        // console.log(this.inFlightTrade)
-        this.inFlightTrade = ethUtils.bufferToHex(Proofs.getTxBytes(this.inFlightTrade.rawTransaction))
-        // console.log(await artifacts.predicate.Common.methods.getAddressFromTxTest(this.inFlightTrade).call())
-        this.deprecationTrade = await zeroXTrade.methods
-            .trade(amount + 100, affiliateAddress, tradeGroupId, _orders, _signatures)
-            .send({ from: otherAccount, gas: 5000000, value: web3.utils.toWei('.01') });
+        }
+        // private key corresponding to 0xbd355a7e5a7adb23b51f54027e624bfe0e238df6
+        this.inFlightTrade = await utils.networks.matic.web3.eth.accounts.signTransaction(txObj, '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712')
+        this.inFlightTrade = this.inFlightTrade.rawTransaction
+
+        txObj.data = zeroXTrade.methods.trade(amount + 100, affiliateAddress, tradeGroupId, _orders, _signatures).encodeABI()
+        this.deprecationTrade = await utils.networks.matic.web3.eth.accounts.signTransaction(txObj, '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712')
+        this.deprecationTrade = await utils.networks.matic.web3.eth.sendSignedTransaction(this.deprecationTrade.rawTransaction)
+        // console.log(this.deprecationTrade)
 
         // 1. Initialize exit
         await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
@@ -169,6 +172,7 @@ describe('verifyDeprecation', function() {
         trade = await augurPredicate.methods
             .executeTrade(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
+        // console.log(JSON.stringify(trade, null, 2))
         // assert that balances were reflected on chain
         await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, filledAmount - amount, 0])
         await assertTokenBalances(exitShareToken, this.rootMarket.options.address, otherAccount, [0, amount, 0])
@@ -214,8 +218,8 @@ describe('verifyDeprecation', function() {
     })
 
     it('verifyDeprecation', async function() {
-        const tradeReceipt = await utils.networks.matic.web3.eth.getTransactionReceipt(this.deprecationTrade.transactionHash)
-        let input = await checkpointUtils.checkpoint(tradeReceipt);
+        // console.log(JSON.stringify(this.deprecationTrade, null, 2))
+        let input = await checkpointUtils.checkpoint(this.deprecationTrade);
         input.logIndex = 0 // this is the index of the order signed by the exitor whose exit is being challenged
         const challengeData = checkpointUtils.buildChallengeData(input)
         let challenge = await utils.artifacts.plasma.WithdrawManager.methods
@@ -312,6 +316,7 @@ function filterShareTokenBalanceChangedEvent(logs, account, market, outcome) {
 
 async function assertTokenBalances(shareToken, market, account, balances) {
     for(let i = 0; i < balances.length; i++) {
+        // console.log(market, i, account, await shareToken.methods.balanceOfMarketOutcome(market, i, account).call())
         assert.equal(
             await shareToken.methods.balanceOfMarketOutcome(market, i, account).call(),
             balances[i]
@@ -319,16 +324,3 @@ async function assertTokenBalances(shareToken, market, account, balances) {
     }
 }
 
-function getTransactionHash(call, sendOptions) {
-    return new Promise((resolve, reject) => {
-        try {
-            call
-            .send(sendOptions)
-            .on('transactionHash', function(hash) { resolve(hash) })
-            .on('error', function(error, receipt) { console.log(error, receipt) })
-            .on('confirmation', function(confirmationNumber, receipt){
-                console.log(confirmationNumber, receipt)
-            })
-        } catch(e) {}
-    })
-}

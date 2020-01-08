@@ -57,8 +57,7 @@ const artifacts = {
         augurPredicate: new web3.eth.Contract(abis.predicate.AugurPredicateTest, addresses.predicate.AugurPredicateTest),
         zeroXTrade: new web3.eth.Contract(abis.predicate.ZeroXTrade, addresses.predicate.ZeroXTrade),
         ZeroXExchange: new web3.eth.Contract(abis.predicate.ZeroXExchange, addresses.predicate.ZeroXExchange),
-        Time: new web3.eth.Contract(abis.predicate.TimeControlled, addresses.predicate.TimeControlled),
-        Common: new web3.eth.Contract(abis.predicate.Common, addresses.predicate.Common)
+        Time: new web3.eth.Contract(abis.predicate.TimeControlled, addresses.predicate.TimeControlled)
     },
     plasma: {
         Registry: new web3.eth.Contract(

@@ -14,10 +14,7 @@ async function checkpoint(receipt) {
     const event = {
         tx: await web3Child.eth.getTransaction(receipt.transactionHash),
         receipt: await web3Child.eth.getTransactionReceipt(receipt.transactionHash),
-        block: await web3Child.eth.getBlock(
-            receipt.blockHash,
-            true /* returnTransactionObjects */
-        )
+        block: await web3Child.eth.getBlock(receipt.blockHash, true /* returnTransactionObjects */)
     }
 
     const blockHeader = Proofs.getBlockHeader(event.block)

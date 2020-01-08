@@ -123,10 +123,18 @@ describe('Predicate - claimCashBalance flow', function() {
         _signatures.push(signatures[0])
 
         // The following trade was created, however the filler was being censored, so they seek consolation from the predicate
-        this.inFlightTrade = await zeroXTrade.methods
-            .trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures)
-            .send({ from: otherAccount, gas: 5000000, value: web3.utils.toWei('.01') });
-        this.inFlightTrade = ethUtils.bufferToHex(Proofs.getTxBytes(await utils.networks.matic.web3.eth.getTransaction(this.inFlightTrade.transactionHash)))
+        let txObj = {
+          gas: 5000000,
+          gasPrice: 1,
+          to: zeroXTrade.options.address,
+          value: web3.utils.toWei('.01'),
+          chainId: 15001,
+          nonce: await utils.networks.matic.web3.eth.getTransactionCount(otherAccount),
+          data: zeroXTrade.methods.trade(amount, affiliateAddress, tradeGroupId, _orders, _signatures).encodeABI()
+        }
+        // private key corresponding to 0xbd355a7e5a7adb23b51f54027e624bfe0e238df6
+        this.inFlightTrade = await utils.networks.matic.web3.eth.accounts.signTransaction(txObj, '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712')
+        this.inFlightTrade = this.inFlightTrade.rawTransaction
 
         // 1. Initialize exit
         await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
