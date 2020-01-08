@@ -2,7 +2,7 @@ const assert = require('assert')
 
 const PredicateRegistry = artifacts.require('predicateRegistry');
 
-const utils = require('../scripts/utils')
+const utils = require('../test/helpers/utils')
 
 module.exports = async function(deployer) {
     const predicateRegistry = await PredicateRegistry.deployed()
@@ -36,6 +36,7 @@ module.exports = async function(deployer) {
         .initializeForMatic(
             predicateRegistry.address,
             utils.addresses.plasma.root.WithdrawManagerProxy,
+            utils.addresses.plasma.root.predicates.ERC20Predicate,
             rootOICash.options.address,
             maticOICash.options.address,
             utils.artifacts.main.augur.options.address,
@@ -55,5 +56,5 @@ module.exports = async function(deployer) {
 
     await predicateRegistry.setZeroXTrade(utils.addresses.matic.ZeroXTrade)
     await predicateRegistry.setRootZeroXTrade(utils.addresses.predicate.ZeroXTrade)
-    await predicateRegistry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange)
+    await predicateRegistry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange, true /* isDefaultExchange */)
 };

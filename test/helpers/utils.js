@@ -4,17 +4,17 @@ const { signatureUtils } = require('0x.js')
 const { LogDecoder } = require('@maticnetwork/eth-decoder').default
 
 const abis = {
-    main: require('../augur/packages/augur-core/output/contracts/abi.json'),
-    matic: require('../augur/packages/augur-core/output/contracts/abi.json'),
-    predicate: require('../predicate/packages/augur-core/output/contracts/abi.json'),
+    main: require('../../augur/packages/augur-core/output/contracts/abi.json'),
+    matic: require('../../augur/packages/augur-core/output/contracts/abi.json'),
+    predicate: require('../../predicate/packages/augur-core/output/contracts/abi.json'),
     predicate_contracts_output: 'predicate/packages/augur-core/output/contracts/contracts.json'
 }
 
 const addresses = {
-    main: require('../output/addresses.main.json'),
-    predicate: require('../output/addresses.predicate.json'),
-    matic: require('../output/addresses.matic.json'),
-    plasma: require('../output/addresses.plasma.json')
+    main: require('../../output/addresses.main.json'),
+    predicate: require('../../output/addresses.predicate.json'),
+    matic: require('../../output/addresses.matic.json'),
+    plasma: require('../../output/addresses.plasma.json')
 }
 
 const web3 = new Web3('http://localhost:8545');
@@ -61,20 +61,24 @@ const artifacts = {
     },
     plasma: {
         Registry: new web3.eth.Contract(
-            require(`../matic/build/contracts/Registry.json`).abi,
+            require(`../../matic/build/contracts/Registry.json`).abi,
             addresses.plasma.root.Registry
         ),
         DepositManager: new web3.eth.Contract(
-            require(`../matic/build/contracts/DepositManager.json`).abi,
+            require(`../../matic/build/contracts/DepositManager.json`).abi,
             addresses.plasma.root.DepositManagerProxy
         ),
         WithdrawManager: new web3.eth.Contract(
-          require(`../matic/build/contracts/WithdrawManager.json`).abi,
+          require(`../../matic/build/contracts/WithdrawManager.json`).abi,
           addresses.plasma.root.WithdrawManagerProxy
         ),
         RootChain: new web3.eth.Contract(
-            require(`../matic/build/contracts/RootChain.json`).abi,
+            require(`../../matic/build/contracts/RootChain.json`).abi,
             addresses.plasma.root.RootChain
+        ),
+        Erc20Predicate: new web3.eth.Contract(
+            require(`../../matic/build/contracts/ERC20Predicate.json`).abi,
+            addresses.plasma.root.predicates.ERC20Predicate
         )
     }
 }
@@ -115,13 +119,13 @@ async function setTime(time) {
 }
 
 async function finalizeMarket(market, network = 'main') {
-    const endTime = await market.methods.getEndTime().call()
+    const endTime = parseInt(await market.methods.getEndTime().call())
     await setTime(endTime + 1)
     try {
         await market.methods.doInitialReport([0, 100, 0], "", 0).send({ from, gas })
         // set timestamp to after designated dispute end
         const disputeWindow = new networks[network].web3.eth.Contract(abis.main.DisputeWindow, await market.methods.getDisputeWindow().call())
-        await setTime((await disputeWindow.methods.getEndTime().call()) + 1)
+        await setTime(parseInt(await disputeWindow.methods.getEndTime().call()) + 1)
         await market.methods.finalize().send({ from, gas })
     } catch(e) {
         console.log(e)
@@ -204,7 +208,7 @@ function approvals(network = 'main') {
 
 function getPredicateHelper(artifact) {
     return new web3.eth.Contract(
-        require(`../build/contracts/${artifact}.json`).abi,
+        require(`../../build/contracts/${artifact}.json`).abi,
         addresses.predicate.helpers[artifact]
     )
 }

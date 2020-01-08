@@ -1,11 +1,10 @@
 const assert = require('assert');
 const ethUtils = require('ethereumjs-util')
 const Buffer = require('safe-buffer').Buffer
-// import { Buffer } from 'safe-buffer'
 const Proofs = require('matic-protocol/contracts-core/helpers/proofs.js')
 const MerkleTree = require('matic-protocol/contracts-core/helpers/merkle-tree.js')
 
-const utils = require('../../scripts/utils')
+const utils = require('./utils')
 const { web3, from, gas } = utils
 const web3Child = utils.networks.matic.web3
 
@@ -15,10 +14,7 @@ async function checkpoint(receipt) {
     const event = {
         tx: await web3Child.eth.getTransaction(receipt.transactionHash),
         receipt: await web3Child.eth.getTransactionReceipt(receipt.transactionHash),
-        block: await web3Child.eth.getBlock(
-            receipt.blockHash,
-            true /* returnTransactionObjects */
-        )
+        block: await web3Child.eth.getBlock(receipt.blockHash, true /* returnTransactionObjects */)
     }
 
     const blockHeader = Proofs.getBlockHeader(event.block)
@@ -38,9 +34,10 @@ async function checkpoint(receipt) {
     )
 
     let receiptProof = await Proofs.getReceiptProof(event.receipt, event.block, null /* web3 */, [event.receipt])
+    let txProof = await Proofs.getTxProof(event.tx, event.block)
 
     const { vote, sigs, extraData } = buildSubmitHeaderBlockPaylod(proposer, start, end, root)
-    const submitHeaderBlock = await rootChain.methods.submitHeaderBlock(vote, sigs, extraData).send({ from, gas })
+    await rootChain.methods.submitHeaderBlock(vote, sigs, extraData).send({ from, gas })
     return {
         headerNumber: await rootChain.methods.currentHeaderBlock().call(),
         blockProof,
@@ -52,6 +49,8 @@ async function checkpoint(receipt) {
             receipt: Proofs.getReceiptBytes(event.receipt), // rlp encoded
             receiptParentNodes: receiptProof.parentNodes,
             path: receiptProof.path,
+            tx: Proofs.getTxBytes(event.tx), // rlp encoded
+            txParentNodes: txProof.parentNodes
         }
     }
 }
@@ -71,8 +70,12 @@ function buildSubmitHeaderBlockPaylod(proposer, start, end, root) {
 }
 
 function buildReferenceTxPayload(input) {
+    return ethUtils.bufferToHex(ethUtils.rlp.encode(_buildReferenceTxPayload(input)));
+}
+
+function _buildReferenceTxPayload(input) {
     const { headerNumber, blockProof, blockNumber, blockTimestamp, reference, logIndex } = input
-    const payload = [
+    return [
       headerNumber,
       ethUtils.bufferToHex(Buffer.concat(blockProof)),
       blockNumber,
@@ -84,10 +87,23 @@ function buildReferenceTxPayload(input) {
       ethUtils.bufferToHex(ethUtils.rlp.encode(reference.path)), // branch mask,
       logIndex
     ]
-    return ethUtils.bufferToHex(ethUtils.rlp.encode(payload));
-  }
+}
+
+function buildChallengeData(input) {
+    const data = _buildReferenceTxPayload(input)
+    const { reference } = input
+    return ethUtils.bufferToHex(
+        ethUtils.rlp.encode(
+            data.concat([
+                ethUtils.bufferToHex(reference.tx),
+                ethUtils.bufferToHex(ethUtils.rlp.encode(reference.txParentNodes))
+            ])
+        )
+    )
+}
 
 module.exports = {
     checkpoint,
-    buildReferenceTxPayload
+    buildReferenceTxPayload,
+    buildChallengeData
 }

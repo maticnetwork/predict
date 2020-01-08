@@ -2,13 +2,13 @@ const assert = require('assert');
 const { readFile } = require('async-file')
 const ethUtils = require('ethereumjs-util')
 const Proofs = require('matic-protocol/contracts-core/helpers/proofs.js')
+
 const checkpointUtils = require('./helpers/checkpointUtils')
 const utils = require('./helpers/utils')
 const { artifacts, abis, web3, otherAccount, from, gas } = utils
 const augurPredicate = artifacts.predicate.augurPredicate
 
-console.log(from, otherAccount)
-describe('Predicate - claimShareBalance flow', function() {
+describe('Predicate - claimCashBalance flow', function() {
     const amount = 100000
 
     before(async function() {
@@ -24,6 +24,8 @@ describe('Predicate - claimShareBalance flow', function() {
 
     it('deposit', async function() {
         // main chain cash (dai)
+        const cash = utils.artifacts.main.cash;
+        this.cash = cash
         const predicate = utils.artifacts.predicate.augurPredicate
         await Promise.all([
             // need cash on the main chain to be able to deposit
@@ -51,18 +53,11 @@ describe('Predicate - claimShareBalance flow', function() {
     it('deposit on Matic', async function() {
         // This task is otherwise managed by Heimdall (our PoS layer)
         // mocking this step
+        this.maticCash = utils.artifacts.matic.cash;
         await Promise.all([
             this.maticCash.methods.faucet(amount).send({ from, gas }),
             this.maticCash.methods.faucet(amount).send({ from: otherAccount, gas })
         ])
-        assert.equal(
-            await this.maticCash.methods.balanceOf(from).call(),
-            amount
-        )
-        assert.equal(
-            await this.maticCash.methods.balanceOf(otherAccount).call(),
-            amount
-        )
     });
 
     it('trade', async function() {
@@ -144,50 +139,39 @@ describe('Predicate - claimShareBalance flow', function() {
         // 1. Initialize exit
         await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
         const { exitShareToken, exitCashToken } = await initializeExit(otherAccount)
-        await augurPredicate.methods.getExitId(otherAccount).call()
+        const exitId = await augurPredicate.methods.getExitId(otherAccount).call()
 
         // 2. Provide proof of self and counterparty share balance
         let input = await checkpointUtils.checkpoint(tradeReceipt);
         // Proof of balance of counterparty having shares of outcome 1
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
-        let claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
           filledAmount
         )
 
-        // Proof of exitor's share balance of outcome 0
-        input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, otherAccount, marketAddress, 0)
-        claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
-        assert.equal(
-          await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
-          filledAmount
-        )
+        // 3. Proof of exitor's cash balance
+        const transfer = await this.maticCash.methods.transfer('0x0000000000000000000000000000000000000001', 0).send({ from: otherAccount, gas })
+        const receipt = await utils.networks.matic.web3.eth.getTransactionReceipt(transfer.transactionHash)
+        input = await checkpointUtils.checkpoint(receipt);
+        input.logIndex = 1 // LogTransfer
+        await augurPredicate.methods.claimCashBalance(checkpointUtils.buildReferenceTxPayload(input), otherAccount).send({ from: otherAccount, gas })
+        const exitCashBalance = parseInt(await exitCashToken.methods.balanceOf(otherAccount).call())
+        assert.equal(exitCashBalance, await this.maticCash.methods.balanceOf(otherAccount).call())
 
-        // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
-        await augurPredicate.methods
-            .claimShareBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
+        // Alternatively, can also use the predicate faucet
+        // const cashFaucetAmount = amount * price
+        // await augurPredicate.methods.claimCashBalanceFaucet(cashFaucetAmount, otherAccount).send({ from: otherAccount, gas })
 
-        // console.log(await artifacts.predicate.Common.methods.getAddressFromTx(this.inFlightTrade).call())
         trade = await augurPredicate.methods
             .executeTrade(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
-
         // assert that balances were reflected on chain
-        assert.equal(
-            await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
-            filledAmount - amount
-        )
-        assert.equal(
-            await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
-            filledAmount - amount
-        )
-        // assert.equal(await exitCashToken.methods.balanceOf(from).call(), 20790 /* 300 * 70 - fee */);
-        // assert.equal(await exitCashToken.methods.balanceOf(otherAccount).call(), 8910 /* 300 * 30 - fee */);
-
-        assert.ok(parseInt(await exitCashToken.methods.balanceOf(from).call()) > 20000);
-        assert.ok(parseInt(await exitCashToken.methods.balanceOf(otherAccount).call()) > 8000);
+        await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, filledAmount - amount, 0])
+        await assertTokenBalances(exitShareToken, this.rootMarket.options.address, otherAccount, [0, amount, 0])
         this.exitCashBalance = await exitCashToken.methods.balanceOf(otherAccount).call()
+        assert.equal(this.exitCashBalance, exitCashBalance - amount * price)
     });
 
     it('startExit (otherAccount)', async function() {
@@ -206,62 +190,18 @@ describe('Predicate - claimShareBalance flow', function() {
     })
 
     it('onFinalizeExit (calls processExitForMarket)', async function() {
-        const beforeOIBalancePredicate = await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()
+        const beforeOIBalancePredicate = parseInt(await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call())
+        assert.equal(await this.cash.methods.balanceOf(otherAccount).call(), 0)
+        await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
 
-        const processExit = await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
-        // console.log(JSON.stringify(processExit, null, 2))
-
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, otherAccount, [700, 0, 700])
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 700, 0])
+        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, otherAccount, [0, 300, 0])
+        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [300, 0, 300])
         assert.equal(
-            await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call(),
-            beforeOIBalancePredicate - this.exitCashBalance - (700 * 100) // predicate bought 700 complete sets
+            parseInt(await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()),
+            beforeOIBalancePredicate - this.exitCashBalance - (300 * 100) // predicate bought 300 complete sets
         )
+        assert.ok(parseInt(await this.cash.methods.balanceOf(otherAccount).call()) > this.exitCashBalance - 100 /* fee deducted when withdrawing from OICash */)
     })
-
-    it('startExit (for from) (uses claimShareBalanceFaucet)', async function() {
-        await augurPredicate.methods.clearExit(from).send({ from, gas })
-        const { exitShareToken, exitCashToken } = await initializeExit(from)
-        await augurPredicate.methods
-            .claimShareBalanceFaucet(from, this.childMarketAddress, 1, 700)
-            .send({ from, gas })
-        await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, 700, 0])
-        let startExit = await augurPredicate.methods.startExit().send({ from, gas })
-        startExit = await web3.eth.getTransactionReceipt(startExit.transactionHash)
-        const exitLog = startExit.logs[1]
-        assert.equal(
-            exitLog.topics[0],
-            '0xaa5303fdad123ab5ecaefaf69137bf8632257839546d43a3b3dd148cc2879d6f' // ExitStarted
-        )
-        assert.equal(
-            exitLog.topics[1].slice(26).toLowerCase(),
-            from.slice(2).toLowerCase(), // exitor
-        )
-    })
-
-    it('onFinalizeExit (calls processExitForFinalizedMarket)', async function() {
-        await utils.finalizeMarket(this.rootMarket)
-
-        // Note that OICash balance for predicate will not be affected
-        // Predicate will redeem the winning shares, have it deposited directly to OICash and then withdraw that OICash
-        const beforeOIBalancePredicate = await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()
-        const beforeCashBalance = await this.cash.methods.balanceOf(from).call()
-
-        const processExit = await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
-        // console.log(JSON.stringify(processExit, null, 2))
-
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 0, 0])
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, from, [0, 0, 0])
-        assert.equal(
-            await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call(),
-            beforeOIBalancePredicate
-        )
-        assert.equal(
-            await this.cash.methods.balanceOf(from).call(),
-            parseInt(beforeCashBalance, 10) + (700 * 100) - 7 // fee
-        )
-    })
-
 });
 
 async function setup() {
