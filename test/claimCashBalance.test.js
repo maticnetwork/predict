@@ -165,7 +165,7 @@ describe('Predicate - claimCashBalance flow', function() {
         // await augurPredicate.methods.claimCashBalanceFaucet(cashFaucetAmount, otherAccount).send({ from: otherAccount, gas })
 
         trade = await augurPredicate.methods
-            .executeTrade(this.inFlightTrade)
+            .executeInFlightTransaction(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
         // assert that balances were reflected on chain
         await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, filledAmount - amount, 0])

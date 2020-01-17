@@ -170,7 +170,7 @@ describe('Predicate - verifyDeprecation flow', function() {
         // await augurPredicate.methods.claimCashBalanceFaucet(cashFaucetAmount, otherAccount).send({ from: otherAccount, gas })
 
         trade = await augurPredicate.methods
-            .executeTrade(this.inFlightTrade)
+            .executeInFlightTransaction(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
         // console.log(JSON.stringify(trade, null, 2))
         // assert that balances were reflected on chain
@@ -323,4 +323,3 @@ async function assertTokenBalances(shareToken, market, account, balances) {
         )
     }
 }
-

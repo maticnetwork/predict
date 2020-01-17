@@ -9,6 +9,7 @@ module.exports = async function(deployer) {
 
     const rootOICash = await utils.getOICashContract('main')
     const maticOICash = await utils.getOICashContract('matic')
+
     // Matic initializations
     await utils.artifacts.plasma.Registry.methods.mapToken(
         rootOICash.options.address,
@@ -23,7 +24,6 @@ module.exports = async function(deployer) {
             3 /* Type.Custom */
         ).send({ from: utils.from, gas: utils.gas })
     }
-
     assert.equal(
         await utils.artifacts.plasma.Registry.methods.predicates(
             utils.artifacts.predicate.augurPredicate.options.address
@@ -32,6 +32,12 @@ module.exports = async function(deployer) {
     )
 
     // Predicate initializations
+    await utils.artifacts.predicate.shareTokenPredicate.methods
+        .initialize(
+            predicateRegistry.address,
+            utils.addresses.plasma.root.WithdrawManagerProxy,
+        )
+        .send({ from: utils.from, gas: 1000000 });
     await utils.artifacts.predicate.augurPredicate.methods
         .initializeForMatic(
             predicateRegistry.address,
@@ -40,6 +46,7 @@ module.exports = async function(deployer) {
             rootOICash.options.address,
             maticOICash.options.address,
             utils.artifacts.main.augur.options.address,
+            utils.addresses.predicate.ShareTokenPredicate,
         )
         .send({ from: utils.from, gas: 1000000 });
     assert.equal(await utils.artifacts.predicate.augurPredicate.methods.predicateRegistry().call(), predicateRegistry.address)
@@ -54,7 +61,11 @@ module.exports = async function(deployer) {
         .send({ from: utils.from, gas: 1000000 });
     assert.equal(await utils.artifacts.predicate.ZeroXExchange.methods.registry().call(), predicateRegistry.address)
 
-    await predicateRegistry.setZeroXTrade(utils.addresses.matic.ZeroXTrade)
-    await predicateRegistry.setRootZeroXTrade(utils.addresses.predicate.ZeroXTrade)
-    await predicateRegistry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange, true /* isDefaultExchange */)
+    await Promise.all([
+        predicateRegistry.setZeroXTrade(utils.addresses.matic.ZeroXTrade),
+        predicateRegistry.setRootZeroXTrade(utils.addresses.predicate.ZeroXTrade),
+        predicateRegistry.setZeroXExchange(utils.addresses.matic.ZeroXExchange, utils.addresses.predicate.ZeroXExchange, true /* isDefaultExchange */),
+        predicateRegistry.setMaticCash(utils.addresses.matic.Cash),
+        predicateRegistry.setShareToken(utils.addresses.matic.ShareToken)
+    ])
 };

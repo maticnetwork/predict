@@ -151,6 +151,7 @@ describe('Predicate - claimShareBalance flow', function() {
         // Proof of balance of counterparty having shares of outcome 1
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
         let claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        // console.log(JSON.stringify(claimShareBalance, null, 2))
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
           filledAmount
@@ -170,9 +171,8 @@ describe('Predicate - claimShareBalance flow', function() {
 
         // console.log(await artifacts.predicate.Common.methods.getAddressFromTx(this.inFlightTrade).call())
         trade = await augurPredicate.methods
-            .executeTrade(this.inFlightTrade)
+            .executeInFlightTransaction(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
-
         // assert that balances were reflected on chain
         assert.equal(
             await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
@@ -261,7 +261,6 @@ describe('Predicate - claimShareBalance flow', function() {
             parseInt(beforeCashBalance, 10) + (700 * 100) - 7 // fee
         )
     })
-
 });
 
 async function setup() {

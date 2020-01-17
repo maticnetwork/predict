@@ -14,6 +14,8 @@ contract PredicateRegistry {
     // matic contracts
     address public zeroXTrade;
     address public defaultExchange;
+    address public maticCash;
+    address public maticShareToken;
 
     // predicate contracts
     address public rootZeroXTrade;
@@ -36,6 +38,14 @@ contract PredicateRegistry {
         if (isDefaultExchange) {
             defaultExchange = childExchange;
         }
+    }
+
+    function setMaticCash(address _maticCash) public /* @todo onlyOwner */ {
+        maticCash = _maticCash;
+    }
+
+    function setShareToken(address _maticShareToken) public /* @todo onlyOwner */ {
+        maticShareToken = _maticShareToken;
     }
 
     function belongsToStateDeprecationContractSet(address _address) public view returns(bool) {
