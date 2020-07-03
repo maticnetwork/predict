@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "truffle": "truffle",
+    "compile": "truffle compile",
     "test": "mocha --timeout 0"
   },
   "dependencies": {
