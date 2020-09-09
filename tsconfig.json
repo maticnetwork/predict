@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["es5", "es6"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2020",
+    "allowJs": true,
+    "removeComments": false,
+    "baseUrl": ".",
+    "paths": {
+      "@maticnetwork/*": ["lib/*"],
+      "typechain": ["typechain/"]
+    }
+  },
+  "exclude": ["node_modules"],
+  "include": [
+    "src",
+    "tasks",
+    "test",
+    "scripts",
+    "migrations",
+    "buidler.config.ts",
+    "node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
+    "node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts", 
+    "helpers/utils.js",
+    "lib",
+    "node_modules/ethereum-types/lib/index.d.ts",
+    "test/shared/mocha.d.ts"
+  ]
+}

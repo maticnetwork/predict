@@ -1,19 +1,58 @@
-const assert = require('assert');
-const { readFile } = require('async-file')
-const ethUtils = require('ethereumjs-util')
-const Proofs = require('matic-protocol/contracts-core/helpers/proofs.js')
-const checkpointUtils = require('./helpers/checkpointUtils')
-const utils = require('./helpers/utils')
-const { artifacts, abis, web3, otherAccount, from, gas } = utils
-const augurPredicate = artifacts.predicate.augurPredicate
+import assert from 'assert'
+import { buildReferenceTxPayload } from './test/helpers/checkpointUtils'
+import * as utils from './test/helpers/utils'
+import { deployAll } from './test/shared/deployment/deployer'
+import { processExits, initializeExit } from './test/shared/exits'
+import { createMarket } from './test/shared/setup'
+import StatefulUtils from "./test/helpers/StatefulUtils"
 
-console.log(from, otherAccount)
-describe('Predicate - claimShareBalance flow', function() {
+const { artifacts, web3, childWeb3, otherAccount, from, gas } = utils
+
+let augurPredicate
+let rootChain
+
+function filterShareTokenBalanceChangedEvent(logs, account, market, outcome) {
+    const indexes = []
+    account = account.slice(2).toLowerCase()
+    market = market.slice(2).toLowerCase()
+    logs.filter((log, i) => {
+        if (
+            log.topics[0].toLowerCase() === '0x350ea32dc29530b9557420816d743c436f8397086f98c96292138edd69e01cb3' // ShareTokenBalanceChanged
+            && log.topics[2].slice(26).toLowerCase() === account
+            && log.topics[3].slice(26).toLowerCase() === market
+            && web3.utils.toBN(log.data.slice(2, 66), 16).eq(web3.utils.toBN(outcome))
+        ) {
+            indexes.push(i);
+            return true;
+        }
+        return false;
+    })
+    assert.equal(indexes.length, 1)
+    return indexes[0]
+}
+
+async function assertTokenBalances(shareToken, market, account, balances) {
+    for(let i = 0; i < balances.length; i++) {
+        assert.equal(
+            await shareToken.methods.balanceOfMarketOutcome(market, i, account).call(),
+            balances[i]
+        )
+    }
+}
+
+contract('Predicate - claimShareBalance flow', function() {
     const amount = 100000
-
+    
     before(async function() {
-        this.cash = utils.artifacts.main.cash;
-        this.maticCash = utils.artifacts.matic.cash;
+        await deployAll()
+
+        augurPredicate = artifacts.predicate.AugurPredicate
+        rootChain = utils.artifacts.plasma.RootChain
+
+        this.statefulUtils = new StatefulUtils(web3, childWeb3, from, gas)
+        this.cash = utils.artifacts.main.Cash
+        this.maticCash = utils.artifacts.matic.Cash
+
         await Promise.all([
             this.cash.methods.joinBurn(from, await this.cash.methods.balanceOf(from).call()).send({ from, gas }),
             this.cash.methods.joinBurn(otherAccount, await this.cash.methods.balanceOf(otherAccount).call()).send({ from: otherAccount, gas }),
@@ -24,7 +63,7 @@ describe('Predicate - claimShareBalance flow', function() {
 
     it('deposit', async function() {
         // main chain cash (dai)
-        const predicate = utils.artifacts.predicate.augurPredicate
+        const predicate = utils.artifacts.predicate.AugurPredicate
         await Promise.all([
             // need cash on the main chain to be able to deposit
             this.cash.methods.faucet(amount).send({ from, gas }),
@@ -35,6 +74,9 @@ describe('Predicate - claimShareBalance flow', function() {
 
         const OICash = await utils.getOICashContract('main')
         this.rootOICash = OICash
+
+        console.log('deposit', this.rootOICash.options.address)
+
         const beforeBalance = await OICash.methods.balanceOf(predicate.options.address).call()
 
         await Promise.all([
@@ -66,12 +108,14 @@ describe('Predicate - claimShareBalance flow', function() {
     });
 
     it('trade', async function() {
-        const { currentTime, numTicks, marketAddress, rootMarket } = await setup()
+        const { currentTime, numTicks, marketAddress, rootMarket } = await createMarket()
+
         this.rootMarket = rootMarket
         this.childMarketAddress = marketAddress
-        const zeroXTrade = utils.artifacts.matic.zeroXTrade
-        const cash = utils.artifacts.matic.cash.methods
-        const shareToken = utils.artifacts.matic.shareToken
+
+        const zeroXTrade = utils.artifacts.matic.ZeroXTrade
+        const cash = utils.artifacts.matic.Cash.methods
+        const shareToken = utils.artifacts.matic.ShareToken
 
         // do trades on child chain
         // Make an order for 1000 attoShares
@@ -91,9 +135,9 @@ describe('Predicate - claimShareBalance flow', function() {
         assert.ok(fromBalance >= creatorCost, 'Creator has insufficient balance')
         assert.ok(otherBalance >= fillerCost, 'Filler has insufficient balance')
 
-        await utils.approvals('matic');
+        await utils.approvals('matic')
 
-        console.log(`Filling Zero X Order`);
+        console.log(`Filling Zero X Order`, affiliateAddress);
         let trade = zeroXTrade.methods.trade(fillAmount, affiliateAddress, tradeGroupId, orders, signatures);
         const amountRemaining = await trade.call({ from: otherAccount, gas: 2000000, value: web3.utils.toWei('.01') });
         console.log(`Amount remaining from fill: ${amountRemaining}`);
@@ -128,6 +172,7 @@ describe('Predicate - claimShareBalance flow', function() {
         _signatures.push(signatures[0])
 
         // The following trade was created, however the filler was being censored, so they seek consolation from the predicate
+        console.log('zeroXTrade.options.address', zeroXTrade.options.address)
         let txObj = {
           gas: 5000000,
           gasPrice: 1,
@@ -144,36 +189,44 @@ describe('Predicate - claimShareBalance flow', function() {
         // 1. Initialize exit
         await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
         const { exitShareToken, exitCashToken } = await initializeExit(otherAccount)
-        await augurPredicate.methods.getExitId(otherAccount).call()
+        console.log('exitShareToken.options.address', exitShareToken.options.address)
+        console.log(await augurPredicate.methods.getExitId(otherAccount).call())
 
         // 2. Provide proof of self and counterparty share balance
-        let input = await checkpointUtils.checkpoint(tradeReceipt);
+        console.log("2. Provide proof of self and counterparty share balance")
+        // let input = await checkpointUtils.checkpoint(tradeReceipt);
+        let input = await this.statefulUtils.submitCheckpoint(rootChain, tradeReceipt.transactionHash, from)
         // Proof of balance of counterparty having shares of outcome 1
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
-        let claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
-        // console.log(JSON.stringify(claimShareBalance, null, 2))
+        // console.log("checkpointUtils.buildReferenceTxPayload(input)", checkpointUtils.buildReferenceTxPayload(input))
+        let claimShareBalance = await augurPredicate.methods.claimShareBalance(buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
           filledAmount
         )
 
         // Proof of exitor's share balance of outcome 0
+        console.log("Proof of exitor's share balance of outcome 0")
         input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, otherAccount, marketAddress, 0)
-        claimShareBalance = await augurPredicate.methods.claimShareBalance(checkpointUtils.buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
+        claimShareBalance = await augurPredicate.methods.claimShareBalance(buildReferenceTxPayload(input)).send({ from: otherAccount , gas })
         assert.equal(
           await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 0, otherAccount).call(),
           filledAmount
         )
 
         // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
+        console.log("Do we expect a counterparty to have Invalid shares as well - to go short on an outcome...?")
         await augurPredicate.methods
             .claimShareBalanceFaucet(otherAccount, marketAddress, 2, filledAmount).send({ from: otherAccount, gas })
 
         // console.log(await artifacts.predicate.Common.methods.getAddressFromTx(this.inFlightTrade).call())
+        console.log("executeInFlightTransaction", augurPredicate.options.address)
         trade = await augurPredicate.methods
             .executeInFlightTransaction(this.inFlightTrade)
             .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
+        console.log('ZeroXTrade.shareToken', await utils.artifacts.predicate.ZeroXTrade.methods.shareToken().call())
         // assert that balances were reflected on chain
+        console.log("assert that balances were reflected on chain")
         assert.equal(
             await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
             filledAmount - amount
@@ -208,11 +261,11 @@ describe('Predicate - claimShareBalance flow', function() {
     it('onFinalizeExit (calls processExitForMarket)', async function() {
         const beforeOIBalancePredicate = await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()
 
-        const processExit = await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
+        await processExits(this.rootOICash.options.address)
         // console.log(JSON.stringify(processExit, null, 2))
 
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, otherAccount, [700, 0, 700])
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 700, 0])
+        await assertTokenBalances(artifacts.main.ShareToken, this.rootMarket.options.address, otherAccount, [700, 0, 700])
+        await assertTokenBalances(artifacts.main.ShareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 700, 0])
         assert.equal(
             await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call(),
             beforeOIBalancePredicate - this.exitCashBalance - (700 * 100) // predicate bought 700 complete sets
@@ -247,11 +300,10 @@ describe('Predicate - claimShareBalance flow', function() {
         const beforeOIBalancePredicate = await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call()
         const beforeCashBalance = await this.cash.methods.balanceOf(from).call()
 
-        const processExit = await utils.artifacts.plasma.WithdrawManager.methods.processExits(this.rootOICash.options.address).send({ from, gas })
-        // console.log(JSON.stringify(processExit, null, 2))
+        const processExit = await processExits(this.rootOICash.options.address)
 
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 0, 0])
-        await assertTokenBalances(artifacts.main.shareToken, this.rootMarket.options.address, from, [0, 0, 0])
+        await assertTokenBalances(artifacts.main.ShareToken, this.rootMarket.options.address, augurPredicate.options.address, [0, 0, 0])
+        await assertTokenBalances(artifacts.main.ShareToken, this.rootMarket.options.address, from, [0, 0, 0])
         assert.equal(
             await this.rootOICash.methods.balanceOf(augurPredicate.options.address).call(),
             beforeOIBalancePredicate
@@ -261,85 +313,4 @@ describe('Predicate - claimShareBalance flow', function() {
             parseInt(beforeCashBalance, 10) + (700 * 100) - 7 // fee
         )
     })
-});
-
-async function setup() {
-    let currentTime = parseInt(await artifacts.main.augur.methods.getTimestamp().call());
-    // Create market on main chain augur
-    const rootMarket = await utils.createMarket({ currentTime }, 'main')
-
-    // Create corresponding market on Matic
-    currentTime = parseInt(await artifacts.matic.augur.methods.getTimestamp().call());
-    const market = await utils.createMarket({ currentTime }, 'matic')
-    const marketAddress = market.options.address
-    const numOutcomes = parseInt(await rootMarket.methods.getNumberOfOutcomes().call())
-    const numTicks = parseInt(await rootMarket.methods.getNumTicks().call())
-    const predicateRegistry = await utils.getPredicateHelper('PredicateRegistry')
-    await predicateRegistry.methods.mapMarket(
-        market.options.address, // child market
-        rootMarket.options.address,
-        numOutcomes,
-        numTicks
-    ).send({ from, gas: 1000000 })
-    return { numTicks, marketAddress, currentTime, rootMarket }
-}
-
-async function initializeExit(account) {
-    // For Exiting, we need a new version of shareToken and Cash
-    // This should be done by the predicate, but this is a temporary solution to work around bytecode too long (@todo fix)
-    const exitShareToken = await deployShareToken();
-    const exitCashToken = await deployCash();
-    const initializeForExit = await augurPredicate.methods.initializeForExit(
-        exitShareToken.options.address, exitCashToken.options.address).send({ from: account, gas })
-    // console.log('initializeForExit', JSON.stringify(initializeForExit, null, 2))
-    return { exitShareToken, exitCashToken }
-}
-
-async function deployShareToken() {
-    const compilerOutput = JSON.parse(await readFile(abis.predicate_contracts_output, 'utf8'));
-    const bytecode = Buffer.from(compilerOutput.contracts['reporting/ShareToken.sol']['ShareToken'].evm.bytecode.object, 'hex');
-    const shareToken = new web3.eth.Contract(abis.predicate.ShareToken);
-    return shareToken.deploy({ // returns new contract instance
-        data: '0x' + bytecode.toString('hex')
-    })
-    .send({ from: otherAccount, gas: 7500000 })
-}
-
-async function deployCash() {
-    const compilerOutput = JSON.parse(await readFile(abis.predicate_contracts_output, 'utf8'));
-    const bytecode = Buffer.from(compilerOutput.contracts['Cash.sol']['Cash'].evm.bytecode.object, 'hex');
-    const cash = new web3.eth.Contract(abis.predicate.Cash);
-    return cash.deploy({ // returns new contract instance
-        data: '0x' + bytecode.toString('hex')
-    })
-    .send({ from: otherAccount, gas: 7500000 })
-}
-
-function filterShareTokenBalanceChangedEvent(logs, account, market, outcome) {
-    const indexes = []
-    account = account.slice(2).toLowerCase()
-    market = market.slice(2).toLowerCase()
-    logs.filter((log, i) => {
-        if (
-            log.topics[0].toLowerCase() === '0x350ea32dc29530b9557420816d743c436f8397086f98c96292138edd69e01cb3' // ShareTokenBalanceChanged
-            && log.topics[2].slice(26).toLowerCase() === account
-            && log.topics[3].slice(26).toLowerCase() === market
-            && web3.utils.toBN(log.data.slice(2, 66), 16).eq(web3.utils.toBN(outcome))
-        ) {
-            indexes.push(i);
-            return true;
-        }
-        return false;
-    })
-    assert.equal(indexes.length, 1)
-    return indexes[0]
-}
-
-async function assertTokenBalances(shareToken, market, account, balances) {
-    for(let i = 0; i < balances.length; i++) {
-        assert.equal(
-            await shareToken.methods.balanceOfMarketOutcome(market, i, account).call(),
-            balances[i]
-        )
-    }
-}
+})

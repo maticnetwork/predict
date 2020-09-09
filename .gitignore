@@ -1,2 +1,8 @@
 node_modules
 build
+artifacts
+typechain
+.DS_Store
+.tmp/
+output/**
+cache

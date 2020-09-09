@@ -1,0 +1,9 @@
+[submodule "core-contracts"]
+	path = core-contracts
+	url = git@github.com:maticnetwork/contracts.git
+[submodule "predicate"]
+	path = predicate
+	url = git@github.com:imyourm8/augur.git
+[submodule "augur"]
+	path = augur
+	url = git@github.com:atvanguard/augur.git
