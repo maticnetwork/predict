@@ -11,7 +11,7 @@ const asyncReaddir = promisify(readdir)
 
 async function transformCoreArtifacts(artifactsPath: string, outputDir: string) {
   if (!existsSync(outputDir)) {
-    mkdirSync(outputDir)
+    mkdirSync(outputDir, { recursive: true })
   }
 
   const files = await asyncReaddir(artifactsPath, { withFileTypes: true })
@@ -22,7 +22,8 @@ async function transformCoreArtifacts(artifactsPath: string, outputDir: string) 
     const output = JSON.parse(buffer.toString())
     const fileContent = {
       contractName: output.contractName,
-      abi: output.abi
+      abi: output.abi,
+      bytecode: output.bytecode
     }
 
     const filepath = join(outputDir, file.name)
@@ -34,20 +35,24 @@ async function transformCoreArtifacts(artifactsPath: string, outputDir: string) 
 
 async function extractAugurArtifacts(outputDir: string) {
   if (!existsSync(outputDir)) {
-    mkdirSync(outputDir)
+    mkdirSync(outputDir, { recursive: true })
   }
 
-  const buffer = await asyncRead('output/contracts/abi.json')
-  const abis = JSON.parse(buffer.toString())
+  const buffer = await asyncRead('output/contracts/contracts.json')
+  const contractsData = JSON.parse(buffer.toString())
   const promises: Promise<void>[] = []
-  for (const contractName in abis) {
-    const fileContent = {
-      contractName,
-      abi: abis[contractName]
+  for (const contractFilename in contractsData.contracts) {
+    for (const contractName in contractsData.contracts[contractFilename]) {
+      const data = contractsData.contracts[contractFilename][contractName]
+      const fileContent = {
+        contractName,
+        abi: data.abi,
+        bytecode: data.evm.bytecode.object
+      }
+  
+      const filepath = join(outputDir, contractName)
+      promises.push(asyncWrite(`${filepath}.json`, JSON.stringify(fileContent)))
     }
-
-    const filepath = join(outputDir, contractName)
-    promises.push(asyncWrite(`${filepath}.json`, JSON.stringify(fileContent)))
   }
 
   await Promise.all(promises)

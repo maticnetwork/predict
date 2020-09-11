@@ -1,5 +1,5 @@
 import BN from 'bn.js'
-import { RootChainReadOnly, ExitPayload, serializeBlockHeader, buildBlockHeaderMerkle, getExitData, buildExitReference } from '@maticnetwork/plasma'
+import { ExitPayload, serializeBlockHeader, buildBlockHeaderMerkle, getExitData, buildExitReference } from '@maticnetwork/plasma'
 import { RootChainReadWrite, HeaderBlockPayload, ValidatorWallet } from './types'
 import { keccak256, toBuffer, ecsign, toRpcSig } from 'ethereumjs-util'
 import { IProviderAdapter } from '../plasma/adapters/IProviderAdapter'

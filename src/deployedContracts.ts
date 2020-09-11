@@ -1,4 +1,4 @@
-import { Contract, Signer, providers } from 'ethers'
+import { Contract, Signer } from 'ethers'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { Universe } from 'typechain/augur/Universe'
@@ -44,11 +44,33 @@ export function getAbi(contractName: ContractName, type: ContractType): any {
   return JSON.parse(jsonFile).abi
 }
 
-export function createContract(address: string, contractName: ContractName, type: ContractType, signerOrProvider?: Signer | providers.Provider): Contract {
-  return new Contract(address, getAbi(contractName, type), signerOrProvider)
+export function createContract<T extends Contract>(address: string, contractName: ContractName, type: ContractType, connectTo?: Signer): T {
+  const contract = new Contract(address, getAbi(contractName, type), connectTo || getProvider(type))
+  contract.type = type
+  return contract as T
 }
 
-export async function getDeployed(contractName: ContractName, type: ContractType, connectTo?: Signer): Promise<Contract> {
+export async function getDeployed<T extends Contract>(contractName: ContractName, type: ContractType, connectTo?: Signer): Promise<T> {
   const contractAddress = await getAddress(contractName, type)
-  return createContract(contractAddress, contractName, type, connectTo || getProvider(type))
+  return createContract<T>(contractAddress, contractName, type, connectTo)
+}
+
+export interface ConnectedContract<T extends Contract> {
+  contract: T;
+  from: T;
+  other: T;
+  fromAddress: string;
+  otherAddress: string;
+}
+
+export async function connectedContract<T extends Contract>(contractName: ContractName, type: ContractType): Promise<ConnectedContract<T>> {
+  const contract = await getDeployed(contractName, type)
+  const provider = getProvider(contract.type)
+  return {
+    contract: contract as T,
+    from: contract.connect(provider.getSigner(0)) as T,
+    other: contract.connect(provider.getSigner(1)) as T,
+    fromAddress: await provider.getSigner(0).getAddress(),
+    otherAddress: await provider.getSigner(1).getAddress()
+  }
 }

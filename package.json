@@ -10,7 +10,7 @@
     "typechain": "buidler typechain",
     "compile": "buidler compile",
     "migrate:local": "truffle migrate --reset --network development",
-    "test": "./node_modules/.bin/mocha -r ts-node/register -r tsconfig-paths/register -r source-map-support/register --timeout 0 \"test/**/*.ts\"",
+    "test": "./node_modules/.bin/mocha -r ts-node/register -r tsconfig-paths/register -r source-map-support/register --require mocha-steps --timeout 0 --watch-extensions ts,tsx \"test/**/*.{ts,tsx}\"",
     "test:truffle": "buidler test --network localhost",
     "testrpc:main": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 -p 9545",
     "testrpc:bor": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 -p 8545 --networkId 15001"
@@ -44,6 +44,7 @@
     "eslint-config-prettier": "^6.11.0",
     "eslint-config-standard": "^14.1.1",
     "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-mocha": "^8.0.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-promise": "^4.2.1",
@@ -58,6 +59,7 @@
     "ganache-cli": "6.9.1",
     "matic-protocol": "maticnetwork/contracts#fa6862dc6ddae97351aa1b4d16c087861b5a489e",
     "merkle-patricia-tree": "^4.0.0",
+    "mocha-steps": "^1.3.0",
     "prettier": "^2.1.1",
     "safe-buffer": "^5.2.1",
     "source-map-support": "^0.5.19",
@@ -65,7 +67,6 @@
     "tsconfig-paths": "^3.9.0",
     "typechain": "^2.0.0",
     "typechain-target-ethers": "^1.0.4",
-    "typechain-target-truffle": "^1.0.2",
     "typescript": "^4.0.2",
     "web3": "^1.2.4",
     "web3-eth-abi": "^1.2.11"

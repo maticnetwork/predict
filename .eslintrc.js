@@ -4,9 +4,13 @@ module.exports = {
     ecmaVersion: 2020, // Allows for the parsing of modern ECMAScript features
     sourceType: 'module' // Allows for the use of imports
   },
+  plugins: [
+    'mocha'
+  ],
   extends: [
     'standard',
-    'plugin:@typescript-eslint/recommended'
+    'plugin:@typescript-eslint/recommended',
+    'plugin:mocha/recommended'
   ],
   env: {
     node: true,
@@ -16,11 +20,7 @@ module.exports = {
   rules: {
     'space-before-function-paren': ['error', 'never'],
     quotes: ['error', 'single'],
-    semi: ['error', 'never']
-  },
-  globals: {
-    contract: true,
-    web3: true,
-    assert: true
+    semi: ['error', 'never'],
+    'mocha/no-exports': 'never'
   }
 }

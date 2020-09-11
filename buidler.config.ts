@@ -18,8 +18,7 @@ const config: BuidlerConfig = {
     timeout: 0,
     fullStackTrace: true,
     color: true,
-    fullTrace: true,
-    bail: true
+    fullTrace: true
   },
   paths: {
     artifacts: './artifacts',

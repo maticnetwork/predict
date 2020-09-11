@@ -2,7 +2,10 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["es5", "es6"],
+    "lib": [
+      "es5",
+      "es6"
+    ],
     "module": "CommonJS",
     "moduleResolution": "node",
     "noImplicitAny": true,
@@ -10,28 +13,45 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ES2020",
+    "target": "ES2015",
     "allowJs": true,
     "removeComments": false,
+    "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@maticnetwork/*": ["lib/*"],
-      "typechain": ["typechain/"]
-    }
+      "@maticnetwork/*": [
+        "lib/*"
+      ],
+      "typechain": [
+        "typechain/"
+      ]
+    },
+    "skipLibCheck": true,
+    "typeRoots": [
+      "./src",
+      "./src/typings",
+      "./node_modules/ethers/index.d.ts",
+      "./node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
+      "./node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
+      "./node_modules/ethereum-types/lib/index.d.ts"
+    ]
   },
-  "exclude": ["node_modules"],
+  "exclude": [
+    "./node_modules",
+    
+  ],
   "include": [
-    "src",
-    "tasks",
-    "test",
-    "scripts",
-    "migrations",
-    "buidler.config.ts",
+    "node_modules/ethers/index.d.ts",
     "node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
-    "node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts", 
-    "helpers/utils.js",
-    "lib",
+    "node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
     "node_modules/ethereum-types/lib/index.d.ts",
-    "test/shared/mocha.d.ts"
+    "artifacts/**/*",
+    "artifacts/**/*.json",
+    "typechain/**/*",
+    "src",
+    "lib",
+    "test",
+    "buidler.config.ts",
+    "tasks"
   ]
 }

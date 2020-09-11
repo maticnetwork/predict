@@ -2,9 +2,14 @@
 import fs from 'fs'
 import { join } from 'path'
 import assert from 'assert'
-import { getDeployed, getAddress } from './deployedContracts'
+
+import { getDeployed, getAddress } from 'src/deployedContracts'
 import { ContractName } from 'src/types'
 import { execShellCommand } from 'src/execShellCommand'
+import { deployContract } from 'ethereum-waffle'
+import { EthProvider } from 'src/providers'
+import { EthWallets } from './../wallets'
+import { utils } from 'ethers'
 
 import PredicateRegistryArtifact from 'artifacts/PredicateRegistry.json'
 import { PredicateRegistry } from 'typechain/PredicateRegistry'
@@ -13,29 +18,9 @@ import { Governance } from 'typechain/core/Governance'
 import { Registry } from 'typechain/core/Registry'
 import { TestToken } from 'typechain/core/TestToken'
 import { StakeManager } from 'typechain/core/StakeManager'
-import { deployContract } from 'ethereum-waffle'
-
-import { EthProvider } from 'src/providers'
 import { AugurPredicate } from 'typechain/AugurPredicate'
 
-import { EthWallets } from './../wallets'
-import { utils } from 'ethers'
-import { Transaction } from 'ethereumjs-tx'
-
 const OUTPUT_DIR = 'output'
-
-export function getTxBytes(tx: any) {
-  tx.gasPrice = utils.hexValue(tx.gasPrice)
-  tx.value = utils.hexValue(tx.value)
-  tx.gasLimit = utils.hexValue(tx.gasLimit)
-  tx.nonce = utils.hexValue(tx.nonce)
-  delete tx.v
-  delete tx.r
-  delete tx.s
-
-  const txObj = new Transaction(tx)
-  return txObj.serialize()
-}
 
 export async function deployAll(): Promise<void> {
   await execShellCommand('npm --prefix "core-contracts" run truffle:compile')
@@ -62,7 +47,7 @@ export async function deployAll(): Promise<void> {
 const from = EthProvider.getSigner(0)
 
 export async function deployAugurPredicate(): Promise<PredicateRegistry> {
-  const predicateRegistry:PredicateRegistry = await deployContract(from, PredicateRegistryArtifact) as unknown as PredicateRegistry
+  const predicateRegistry:PredicateRegistry = await deployContract(from, PredicateRegistryArtifact) as PredicateRegistry
   const rootOICash = await getDeployed(ContractName.OICash, 'augur-main') as OiCash
   const Governance = await getDeployed(ContractName.Governance, 'plasma') as Governance
   const maticOICash = await getDeployed(ContractName.OICash, 'augur-matic') as OiCash
@@ -149,13 +134,11 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
 
   assert.equal(await ZeroXExchange.registry(), predicateRegistry.address)
 
-  await Promise.all([
-    predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic')),
-    predicateRegistry.setRootZeroXTrade(ZeroXTrade.address),
-    predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true /* isDefaultExchange */),
-    predicateRegistry.setMaticCash(await getAddress(ContractName.Cash, 'augur-matic')),
-    predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
-  ])
+  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic')),
+  await predicateRegistry.setRootZeroXTrade(ZeroXTrade.address),
+  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true /* isDefaultExchange */),
+  await predicateRegistry.setMaticCash(await getAddress(ContractName.Cash, 'augur-matic')),
+  await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
 }
 
 async function prepareRootChainForTesting() {
