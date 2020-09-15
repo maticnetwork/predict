@@ -1,14 +1,10 @@
-import { signatureUtils } from '0x.js'
-import { utils, constants, Wallet } from 'ethers'
-import { deployMarket } from './deployment/augur'
+import { constants, Wallet } from 'ethers'
 import { Context } from 'mocha'
-import { Market } from 'typechain/augur/Market'
 import { ZeroXTrade } from 'typechain/augur/ZeroXTrade'
 import { ZeroXExchange } from 'typechain/augur/ZeroXExchange'
 import { ContractType, ContractName } from 'src/types'
-import { getDeployed, getAddress } from 'src/deployedContracts'
+import { getDeployed } from 'src/deployedContracts'
 import { toBuffer, bufferToHex } from 'ethereumjs-util'
-import { EthWallets } from './wallets'
 import { sign0x } from './utils'
 
 export interface OrderRequest {

@@ -1,12 +1,14 @@
 import BN from 'bn.js'
 import { ExitPayload, serializeBlockHeader, buildBlockHeaderMerkle, getExitData, buildExitReference } from '@maticnetwork/plasma'
 import { RootChainReadWrite, HeaderBlockPayload, ValidatorWallet } from './types'
-import { keccak256, toBuffer, ecsign, toRpcSig } from 'ethereumjs-util'
+import { keccak256, toBuffer, ecsign, toRpcSig, bufferToHex } from 'ethereumjs-util'
 import { IProviderAdapter } from '../plasma/adapters/IProviderAdapter'
+import { MATIC_CHAIN_ID } from 'src/constants'
+import { BigNumber, utils } from 'ethers'
 
 const Web3EthAbi = require('web3-eth-abi')
 
-export function getValidatorSignatures(wallets: ValidatorWallet[], votedata: Buffer): string[] {
+export function getValidatorSignatures(wallets: ValidatorWallet[], voteData: Buffer): Buffer[] {
   // avoid any potential side effects
   const copyWallets = [...wallets]
   copyWallets.sort((w1, w2) => {
@@ -14,8 +16,8 @@ export function getValidatorSignatures(wallets: ValidatorWallet[], votedata: Buf
   })
 
   return copyWallets.map(w => {
-    const vrs = ecsign(votedata, w.privateKey)
-    return toRpcSig(vrs.v, vrs.r, vrs.s)
+    const vrs = ecsign(voteData, w.privateKey)
+    return toBuffer(toRpcSig(vrs.v, vrs.r, vrs.s))
   })
 }
 
@@ -29,26 +31,25 @@ export function buildSubmitHeaderBlockPayload(
 ): HeaderBlockPayload {
   const data = Web3EthAbi.encodeParameters(
     ['address', 'uint256', 'uint256', 'bytes32', 'bytes32', 'uint256'],
-    [proposer, start, end, root, rewardsRoot, 15001]
+    [proposer, start, end, utils.hexZeroPad(root, 32), utils.hexZeroPad(rewardsRoot, 32), MATIC_CHAIN_ID]
   )
 
-  const validators = [wallets[0], wallets[1]]
+  // append positive vote byte
   const sigData = Buffer.concat([toBuffer('0x01'), toBuffer(data)])
-
-  const sigs = getValidatorSignatures(validators, keccak256(sigData))
-  const combinedSigs = Buffer.concat(sigs.map(s => toBuffer(s)))
-  return { data, sigs: combinedSigs }
+  const sigs = getValidatorSignatures(wallets, keccak256(sigData))
+  const combinedSigs = Buffer.concat(sigs)
+  return { data, sigs: bufferToHex(combinedSigs) }
 }
 
 export class CheckpointHelper {
-  private provider: IProviderAdapter
+  private maticProvider: IProviderAdapter
   private offset: number
   private lastBlockNumber: number
   private rootChain: RootChainReadWrite
 
-  constructor(provider: IProviderAdapter, rootChain: RootChainReadWrite) {
-    this.provider = provider
-    this.lastBlockNumber = 0
+  constructor(maticProvider: IProviderAdapter, rootChain: RootChainReadWrite) {
+    this.maticProvider = maticProvider
+    this.lastBlockNumber = -1
     this.offset = 0
     this.rootChain = rootChain
   }
@@ -58,7 +59,7 @@ export class CheckpointHelper {
     lastTxHash: string,
     proposer: string
   ): Promise<ExitPayload> {
-    const provider = this.provider
+    const provider = this.maticProvider
     const rootChain = this.rootChain
 
     const { tx, receipt, block } = await getExitData(provider, lastTxHash)
@@ -76,12 +77,10 @@ export class CheckpointHelper {
     this.lastBlockNumber = end
 
     if (start > end) {
-      throw new Error(`Invalid end block number for checkpoint ${JSON.stringify({ start, end }, null, 2)}`)
+      throw new Error(`Invalid end block number for checkpoint { start: ${start} end: ${end} }`)
     }
-
     const tree = await buildBlockHeaderMerkle(provider, start, end, this.offset)
     const root = tree.getRoot()
-    const blockProof = tree.getProof(serializeBlockHeader(block))
 
     const { data, sigs } = buildSubmitHeaderBlockPayload(
       wallets,
@@ -93,14 +92,14 @@ export class CheckpointHelper {
     )
 
     const { headerBlockId } = await rootChain.submitHeaderBlock(data, sigs)
-    const headerBlock = await rootChain.headerBlocks(headerBlockId)
+    const { createdAt } = await rootChain.headerBlocks(headerBlockId)
 
-    return {
-      blockNumber: block.number,
-      blockTimestamp: block.timestamp,
-      blockProof,
+    return {  
+      blockNumber: new BN(block.number),
+      blockTimestamp: new BN(block.timestamp),
+      blockProof: tree.getProof(serializeBlockHeader(block)),
       headerNumber: new BN(headerBlockId),
-      createdAt: new BN(headerBlock.createdAt),
+      createdAt: new BN(createdAt),
       reference: await buildExitReference(
         provider,
         block,

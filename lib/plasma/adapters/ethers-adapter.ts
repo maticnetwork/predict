@@ -1,7 +1,10 @@
 import { IProviderAdapter } from './IProviderAdapter'
-import { utils, providers, Transaction } from 'ethers'
+import { utils, providers, Transaction, BigNumber } from 'ethers'
 import { KECCAK256_NULL } from 'ethereumjs-util'
 import { SerializableTransaction, Block, TransactionReceipt } from '../types'
+
+// eslint-disable-next-line
+const bluebird = require('bluebird')
 
 export class EthersAdapter implements IProviderAdapter {
   private provider: providers.JsonRpcProvider
@@ -10,7 +13,7 @@ export class EthersAdapter implements IProviderAdapter {
     this.provider = provider
   }
 
-  transformTx(tx: Transaction): SerializableTransaction {
+  private transformEthersTx(tx: Transaction): SerializableTransaction {
     return {
       to: tx.to!,
       gasPrice: utils.hexValue(tx.gasPrice),
@@ -24,23 +27,35 @@ export class EthersAdapter implements IProviderAdapter {
     }
   }
 
-  buildBlockFromRpcData(blockData: any): Block {
-    console.log(blockData)
+  private transformRpcTx(tx: any): SerializableTransaction {
     return {
-      number: blockData.number,
+      to: tx.to!,
+      gasPrice: tx.gasPrice,
+      gasLimit: tx.gas,
+      value: tx.value,
+      nonce: utils.hexValue(tx.nonce),
+      data: tx.input,
+      hash: tx.hash,
+      blockHash: tx.blockHash,
+      transactionIndex: BigNumber.from(tx.transactionIndex).toNumber()
+    }
+  }
+
+  private buildBlockFromRpcData(blockData: any): Block {
+    return {
+      number: BigNumber.from(blockData.number).toNumber(),
       hash: blockData.hash,
       parentHash: blockData.parentHash,
-      timestamp: blockData.timestamp,
+      timestamp: BigNumber.from(blockData.timestamp).toNumber(),
       difficulty: blockData.difficulty,
       nonce: blockData.nonce,
       extraData: blockData.extraData,
-      gasLimit: blockData.gasLimit.toNumber(),
-      gasUsed: blockData.gasUsed.toNumber(),
+      gasLimit: BigNumber.from(blockData.gasLimit).toNumber(),
+      gasUsed: BigNumber.from(blockData.gasUsed).toNumber(),
       transactionsRoot: blockData.transactionsRoot,
       receiptsRoot: blockData.receiptRoot || blockData.receiptsRoot || KECCAK256_NULL,
       stateRoot: blockData.stateRoot,
-      // transactions: blockData.transactions.map(tx => this.transformTx(tx as Transaction))
-      transactions: []
+      transactions: blockData.transactions.map((tx: any) => { return this.transformRpcTx(tx) })
     }
   }
 
@@ -49,14 +64,35 @@ export class EthersAdapter implements IProviderAdapter {
     return this.buildBlockFromRpcData(blockData)
   }
 
-  async getBlock(number: number): Promise<Block> {
+  async getBlock(number: number, offset?: number): Promise<Block> {
+    if (offset) {
+      number += offset // important in case if testing code uses offset to conuter ganache
+    }
+
     const blockData = await this.provider.send('eth_getBlockByNumber', [utils.hexValue(number), true])
     return this.buildBlockFromRpcData(blockData)
   }
 
+  async getBlockBatched(start: number, end: number, offset?: number): Promise<Block[]> {
+    const blocks = new Array(end - start + 1)
+    const _offset = offset ? offset : 0
+    await bluebird.map(
+      blocks,
+      // eslint-disable-next-line
+      async (_: any, i: number) => {
+        const block = await this.getBlock(i + start + _offset)
+        block.number = i + start // important in case if testing code uses offset to conuter ganache
+        blocks[i] = block
+      },
+      { concurrency: 10 }
+    )
+
+    return blocks
+  }
+
   async getTransaction(hash: string): Promise<SerializableTransaction> {
     const tx = await this.provider.getTransaction(hash)
-    const serializedTx = this.transformTx(tx)
+    const serializedTx = this.transformEthersTx(tx)
     serializedTx.blockNumber = tx.blockNumber
     return serializedTx
   }

@@ -1,27 +1,18 @@
 import { use, expect } from 'chai'
 import { solidity } from 'ethereum-waffle'
+import { toBuffer } from 'ethereumjs-util'
+import { utils } from 'ethers'
 
-import { AugurPredicate } from 'typechain/AugurPredicate'
-import { RootChain } from 'typechain/core/RootChain'
-import { Cash } from 'typechain/augur/Cash'
-import { Augur } from 'typechain/augur/Augur'
-import { TimeControlled } from 'typechain/augur/TimeControlled'
-
-import { deployAll } from '../../shared/deployment/deployer'
-import { getDeployed, connectedContract } from 'src/deployedContracts'
-import { ContractName, toBN } from 'src/types'
+import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from '../../shared/wallets'
-import { EthProvider, MaticProvider } from 'src/providers'
-import { RootchainAdapter } from '../../shared/rootChainAdapter'
 
 import { AUGUR_FEE, MATIC_CHAIN_ID } from 'src/constants'
 import { createOrder } from '../../shared/orders'
-import { utils } from 'ethers'
-
+import { buildReferenceTxPayload } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit } from './setup'
-
 import { createMarket } from '../../shared/setup'
-import { toBuffer } from 'ethereumjs-util'
+import { indexOfEvent } from '../../shared/events'
+import { assertTokenBalances } from '../../shared/assert'
 
 use(solidity)
 
@@ -102,11 +93,12 @@ describe('AugurPredicate', function() {
             marketAddress, 
             amount: orderAmount, 
             price: sharePrice, 
-            currentTime, outcome: 1 /* Yes */, 
+            currentTime, 
+            outcome: 1 /* Yes */, 
             direction: 1 /* Ask */ 
           },
-          'matic',
-          from
+          'augur-matic',
+          maticFrom
         )
       )
       _orders.push(orders[0])
@@ -114,7 +106,7 @@ describe('AugurPredicate', function() {
 
       // The following trade was created, however the filler was being censored, so they seek consolation from the predicate
       const txObj = {
-        gas: 5000000,
+        gasLimit: 5000000,
         gasPrice: 1,
         to: this.maticZeroXTrade.contract.address,
         value: AUGUR_FEE,
@@ -126,44 +118,54 @@ describe('AugurPredicate', function() {
       this.inFlightTrade = await otherFrom.signTransaction(txObj)
 
       // // 1. Initialize exit
-      // await augurPredicate.methods.clearExit(otherAccount).send({ from: otherAccount, gas })
+      await this.augurPredicate.other.clearExit(otherFrom.address)
       const { exitShareToken, exitCashToken } = await initializeAugurPredicateExit.call(this, otherFrom)
-      const exitId = await this.augurPredicate.contract.getExitId(otherFrom.address)
 
       // 2. Provide proof of self and counterparty share balance
       let input = await this.checkpointHelper.submitCheckpoint(validatorWallets, tradeReceipt.transactionHash, from.address)
       // Proof of balance of counterparty having shares of outcome 1
-      console.log('// Proof of balance of counterparty having shares of outcome 1')
-      // input.logIndex = filterShareTokenBalanceChangedEvent(tradeReceipt.logs, from, marketAddress, 1)
-      // await augurPredicate.methods.claimShareBalance(buildReferenceTxPayload(input)).send({ from: otherAccount, gas })
-      // assert.equal(
-      //   await exitShareToken.methods.balanceOfMarketOutcome(rootMarket.options.address, 1, from).call(),
-      //   filledAmount
-      // )
-      // console.log('// 3. Proof of exitor\'s cash balance')
+      input.logIndex = indexOfEvent({
+        logs: tradeReceipt.logs,
+        contractName: ContractName.Augur,
+        contractType: 'augur-matic',
+        eventName: 'ShareTokenBalanceChanged'
+      }, {
+        account: from.address,
+        market: marketAddress,
+        outcome: 1
+      })
+      await this.augurPredicate.other.claimShareBalance(buildReferenceTxPayload(input))
+
+      expect(
+        await exitShareToken.balanceOfMarketOutcome(rootMarket.address, 1, from.address)
+      ).to.be.equal(filledAmount)
       // // 3. Proof of exitor's cash balance
-      // const transfer = await this.maticCash.methods.transfer('0x0000000000000000000000000000000000000001', 0).send({ from: otherAccount, gas })
-      // const receipt = await utils.networks.matic.web3.eth.getTransactionReceipt(transfer.transactionHash)
-      // input = await this.statefulUtils.submitCheckpoint(rootChain, receipt.transactionHash, from)
-      // input.logIndex = 1 // LogTransfer
-      // console.log('claimCashBalance')
-      // await augurPredicate.methods.claimCashBalance(buildReferenceTxPayload(input), otherAccount).send({ from: otherAccount, gas })
-      // const exitCashBalance = parseInt(await exitCashToken.methods.balanceOf(otherAccount).call())
-      // assert.equal(exitCashBalance, await this.maticCash.methods.balanceOf(otherAccount).call())
+      const transfer = await this.maticCash.other.transfer('0x0000000000000000000000000000000000000001', 0)
+      const receipt = await transfer.wait(0)
+      input = await this.checkpointHelper.submitCheckpoint(validatorWallets, receipt.transactionHash, from.address)
+      input.logIndex = indexOfEvent({
+        logs: receipt.logs,
+        contractName: ContractName.Cash,
+        contractType: 'augur-matic',
+        eventName: 'LogTransfer'
+      })
+      await this.augurPredicate.other.claimCashBalance(buildReferenceTxPayload(input), otherFrom.address)
 
-      // // // Alternatively, can also use the predicate faucet
-      // // // const cashFaucetAmount = amount * price
-      // // // await augurPredicate.methods.claimCashBalanceFaucet(cashFaucetAmount, otherAccount).send({ from: otherAccount, gas })
+      const exitCashBalance = await exitCashToken.balanceOf(otherFrom.address)
+      expect(exitCashBalance).to.be.equal(await this.maticCash.contract.balanceOf(otherFrom.address))
 
-      // console.log('executeInFlightTransaction', augurPredicate.options.address)
-      // trade = await augurPredicate.methods
-      //   .executeInFlightTransaction(this.inFlightTrade)
-      //   .send({ from: otherAccount, gas, value: web3.utils.toWei('.01') /* protocol fee */ })
-      // // assert that balances were reflected on chain
-      // await assertTokenBalances(exitShareToken, this.rootMarket.options.address, from, [0, filledAmount - amount, 0])
-      // await assertTokenBalances(exitShareToken, this.rootMarket.options.address, otherAccount, [0, amount, 0])
-      // this.exitCashBalance = await exitCashToken.methods.balanceOf(otherAccount).call()
-      // assert.equal(this.exitCashBalance, exitCashBalance - amount * price)
+      // Alternatively, can also use the predicate faucet
+      // const cashFaucetAmount = amount * price
+      // await augurPredicate.methods.claimCashBalanceFaucet(cashFaucetAmount, otherAccount).send({ from: otherAccount, gas })
+
+      const trade = await this.augurPredicate.other.executeInFlightTransaction(this.inFlightTrade, { value: AUGUR_FEE })
+      // assert that balances were reflected on chain
+      await assertTokenBalances(exitShareToken, rootMarket.address, from.address, [0, filledAmount - orderAmount, 0])
+      await assertTokenBalances(exitShareToken, rootMarket.address, otherFrom.address, [0, orderAmount, 0])
+
+      expect(
+        await exitCashToken.balanceOf(otherFrom.address)
+      ).to.be.eq(exitCashBalance.sub(orderAmount * sharePrice))
     })
   })
 })

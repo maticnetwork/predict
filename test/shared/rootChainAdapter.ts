@@ -1,6 +1,7 @@
 import { RootChain } from 'typechain/core/RootChain'
 import { RootChainBlockHeader } from '@maticnetwork/plasma'
 import { RootChainReadWrite, NewHeaderBlock } from '@maticnetwork/plasma-test-utils'
+import { ContractInterface } from 'ethers'
 
 export class RootchainAdapter implements RootChainReadWrite {
   private rootchain: RootChain
@@ -9,12 +10,18 @@ export class RootchainAdapter implements RootChainReadWrite {
     this.rootchain = rootchain
   }
 
-  async submitHeaderBlock(data: string, sigs: Buffer): Promise<NewHeaderBlock> {
-    const receipt = await (await this.rootchain.submitHeaderBlock(data, sigs)).wait(1)
-    const parsedLogs = receipt.logs.map(l => this.rootchain.interface.parseLog(l))
+  async submitHeaderBlock(data: string, sigs: string): Promise<NewHeaderBlock> {
+    const receipt = await (await this.rootchain.submitHeaderBlock(data, sigs)).wait(0)
+    const parsedLogs = []
+    for (const log of receipt.logs) {
+      try {
+        parsedLogs.push(this.rootchain.interface.parseLog(log))
+      } catch (_) {}
+    }
+
     const evt = parsedLogs.find(l => l.name === 'NewHeaderBlock')
     return {
-      headerBlockId: evt!.args.headerBlockId
+      headerBlockId: evt!.args.headerBlockId.toString()
     }
   }
 

@@ -2,7 +2,7 @@ import { RootChainReadOnly } from '@maticnetwork/plasma'
 
 export interface HeaderBlockPayload {
   data: string;
-  sigs: Buffer;
+  sigs: string;
 }
 
 export interface ValidatorWallet {
@@ -15,5 +15,5 @@ export interface NewHeaderBlock {
 }
 
 export interface RootChainReadWrite extends RootChainReadOnly {
-  submitHeaderBlock(data: string, sigs: Buffer): Promise<NewHeaderBlock>
+  submitHeaderBlock(data: string, sigs: string): Promise<NewHeaderBlock>
 }

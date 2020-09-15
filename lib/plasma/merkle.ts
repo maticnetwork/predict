@@ -77,6 +77,7 @@ export class MerkleTree {
         proof.push(this.layers[i][siblingIndex])
       }
     }
+
     return proof
   }
 

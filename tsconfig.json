@@ -33,7 +33,8 @@
       "./node_modules/ethers/index.d.ts",
       "./node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
       "./node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
-      "./node_modules/ethereum-types/lib/index.d.ts"
+      "./node_modules/ethereum-types/lib/index.d.ts",
+      "./node_modules/merkle-patricia-tree/dist/index.d.ts"
     ]
   },
   "exclude": [
@@ -45,6 +46,7 @@
     "node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
     "node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
     "node_modules/ethereum-types/lib/index.d.ts",
+    "node_modules/merkle-patricia-tree/dist/index.d.ts",
     "artifacts/**/*",
     "artifacts/**/*.json",
     "typechain/**/*",

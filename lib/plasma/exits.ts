@@ -1,31 +1,21 @@
 import BN from 'bn.js'
-import { buildBlockHeaderMerkle, serializeBlockHeader, getReceiptProof, getTxProof, verifyTxProof, getReceiptBytes, getTxBytes } from './proofs'
+import { buildBlockHeaderMerkle, serializeBlockHeader, getReceiptProof, getTxProof, getReceiptBytes, getTxBytes } from './proofs'
 import { RootChainReadOnly, ExitReference, ExitPayload, Block, SerializableTransaction, TransactionReceipt, ExitData } from './types'
 import { IProviderAdapter } from './adapters/IProviderAdapter'
-import { rlp, bufferToHex } from 'ethereumjs-util'
-import { MerkleTree } from './merkle'
+import { rlp, bufferToHex, toBuffer } from 'ethereumjs-util'
 import assert from 'assert'
 
 export async function buildExitReference(provider: IProviderAdapter, block: Block, tx: SerializableTransaction, receipt: TransactionReceipt): Promise<ExitReference> {
-  const blockHeader = serializeBlockHeader(block)
-  const tree = new MerkleTree([blockHeader])
   const receiptProof = await getReceiptProof(provider, receipt, block, [receipt])
   const txProof = await getTxProof(tx, block)
-
-  assert.ok(
-    verifyTxProof(receiptProof),
-    '[buildReference] verify receipt proof failed in js'
-  )
-
   return {
     receipt: getReceiptBytes(receipt), // rlp encoded
     receiptParentNodes: receiptProof.parentNodes,
     tx: getTxBytes(tx), // rlp encoded
     txParentNodes: txProof.parentNodes,
     path: receiptProof.path,
-    transactionsRoot: Buffer.from(block.transactionsRoot.slice(2), 'hex'),
-    receiptsRoot: Buffer.from(block.receiptsRoot.slice(2), 'hex'),
-    proof: tree.getProof(blockHeader)
+    transactionsRoot: toBuffer(block.transactionsRoot),
+    receiptsRoot: toBuffer(block.receiptsRoot)
   }
 }
 
@@ -33,6 +23,7 @@ export async function getExitData(provider: IProviderAdapter, txHash: string): P
   const exitTx = await provider.getTransaction(txHash)
   const receipt = await provider.getTransactionReceipt(txHash)
   const block = await provider.getBlockByHash(receipt.blockHash)
+  
   return {
     tx: exitTx,
     receipt,
@@ -119,8 +110,8 @@ export async function buildPayloadForExit(provider: IProviderAdapter, rootChain:
   }
 
   return {
-    blockNumber: block.number,
-    blockTimestamp: block.timestamp,
+    blockNumber: new BN(block.number),
+    blockTimestamp: new BN(block.timestamp),
     blockProof,
     headerNumber: new BN(headerBlockNumber),
     createdAt: new BN(headerBlock.createdAt),
@@ -148,7 +139,7 @@ function _buildReferenceTxPayload(input: ExitPayload) {
     headerNumber,
     bufferToHex(Buffer.concat(blockProof)),
     blockNumber,
-    blockTimestamp,
+    blockTimestamp.toNumber(),
     bufferToHex(reference.transactionsRoot),
     bufferToHex(reference.receiptsRoot),
     bufferToHex(reference.receipt),

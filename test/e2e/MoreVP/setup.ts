@@ -6,22 +6,17 @@ import { deployAll } from '../../shared/deployment/deployer'
 import { getDeployed, connectedContract, getAddress } from 'src/deployedContracts'
 import { ContractName } from 'src/types'
 import { CheckpointHelper } from '@maticnetwork/plasma-test-utils'
-import { EthProvider } from 'src/providers'
+import { MaticProvider } from 'src/providers'
 import { RootchainAdapter } from '../../shared/rootChainAdapter'
 import { EthersAdapter } from '@maticnetwork/plasma'
 import { Signer } from 'ethers'
 import { deployContract } from 'ethereum-waffle'
 
-import ShareTokenArtifact from 'artifacts/augur/ShareToken.json'
-import CashArtifact from 'artifacts/augur/Cash.json'
+import ShareTokenArtifact from 'artifacts/predicate/ShareToken.json'
+import CashArtifact from 'artifacts/predicate/Cash.json'
 
-import { OiCash } from 'typechain/augur/OiCash'
-import { AugurPredicate } from 'typechain/AugurPredicate'
-import { RootChain } from 'typechain/core/RootChain'
 import { Cash } from 'typechain/augur/Cash'
-import { Augur } from 'typechain/augur/Augur'
-import { ShareToken } from 'typechain/augur/ShareToken'
-import { TimeControlled } from 'typechain/augur/TimeControlled'
+import { ShareToken } from 'typechain/predicate/ShareToken'
 
 const [from, otherFrom] = EthWallets
 const defaultCashAmount = 100000
@@ -32,11 +27,11 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.from = from.address
   this.otherFrom = otherFrom.address
 
-  this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'predicate')
   this.rootChain = await getDeployed(ContractName.RootChain, 'plasma')
-  this.rootOICash = await connectedContract(ContractName.OICash, 'augur-main')
+  this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
 
-  this.checkpointHelper = new CheckpointHelper(new EthersAdapter(EthProvider), new RootchainAdapter(this.rootChain.connect(from)))
+  this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'predicate')
+  this.rootOICash = await connectedContract(ContractName.OICash, 'augur-main')
   this.cash = await connectedContract(ContractName.Cash, 'augur-main')
   this.maticCash = await connectedContract(ContractName.Cash, 'augur-matic')
 
@@ -96,8 +91,8 @@ export async function approveAllForCashAndShareTokens(contractType: ContractType
 export async function initializeAugurPredicateExit(this: Context, from: Signer) {
   // For Exiting, we need a new version of shareToken and Cash
   // This should be done by the predicate, but this is a temporary solution to work around bytecode too long (@todo fix)
-  const exitShareToken = await deployContract(from, ShareTokenArtifact) as ShareToken
-  const exitCashToken = await deployContract(from, CashArtifact) as Cash
+  const exitShareToken = await deployContract(EthWallets[0], ShareTokenArtifact, undefined, { gasLimit: 7500000 }) as ShareToken
+  const exitCashToken = await deployContract(EthWallets[0], CashArtifact, undefined, { gasLimit: 7500000 }) as Cash
   await this.augurPredicate.contract.connect(from).initializeForExit(exitShareToken.address, exitCashToken.address)
   return { exitShareToken, exitCashToken }
 }

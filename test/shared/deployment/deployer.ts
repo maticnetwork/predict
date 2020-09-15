@@ -64,7 +64,7 @@ export async function deployAugurPredicate(): Promise<PredicateRegistry> {
 
   // write addresses to predicate addresses file
   const predicateAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, 'addresses.predicate.json')).toString())
-  predicateAddresses.helpers = { PredicateRegistry: predicateRegistry.address }
+  predicateAddresses.PredicateRegistry = predicateRegistry.address
   fs.writeFileSync(join(OUTPUT_DIR, 'addresses.predicate.json'), JSON.stringify(predicateAddresses, null, 2))
 
   return predicateRegistry
@@ -152,6 +152,7 @@ async function prepareRootChainForTesting() {
   for (const wallet of EthWallets) {
     await stakeToken.mint(wallet.address, mintAmount)
     await stakeToken.connect(wallet).approve(stakeManager.address, mintAmount)
-    await stakeManager.connect(wallet).stake(stakeAmount, defaultHeimdallFee, false, wallet.publicKey)
+    // ethers using 65 bytes public key prepending 0x04, remove that part
+    await stakeManager.connect(wallet).stake(stakeAmount, defaultHeimdallFee, false, `0x${wallet.publicKey.substr(4)}`)
   }
 }

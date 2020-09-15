@@ -59,14 +59,14 @@ export interface Block {
   transactions: SerializableTransaction[];
 }
 
-export type MerkleNode = Buffer
+export type MerkleNode = Buffer[]
 
 export interface ExitProof {
   blockHash: Buffer;
-  parentNodes: MerkleNode[][];
+  parentNodes: MerkleNode[];
   root: Buffer;
   path: Buffer;
-  value: Buffer[] | Buffer;
+  value: any;
 }
 
 export interface RootChainBlockHeader {
@@ -83,18 +83,17 @@ export interface RootChainReadOnly {
 
 export interface ExitReference {
   receipt: Buffer;
-  receiptParentNodes: MerkleNode[][];
+  receiptParentNodes: MerkleNode[];
   tx: Buffer;
-  txParentNodes: MerkleNode[][];
+  txParentNodes: MerkleNode[];
   path: Buffer;
   transactionsRoot: Buffer;
   receiptsRoot: Buffer;
-  proof: Buffer[];
 }
 
 export interface ExitPayload {
-  blockNumber: number;
-  blockTimestamp: number;
+  blockNumber: BN;
+  blockTimestamp: BN;
   blockProof: Buffer[];
   headerNumber: BN;
   createdAt: BN;

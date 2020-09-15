@@ -19,6 +19,10 @@ declare module '@nomiclabs/buidler/types' {
     artifacts: ArtifactPaths;
   }
 
+  export interface BuidlerNetworkConfig {
+    networkId: number;
+  }
+
   export interface ProjectPaths {
     augur: string;
     augurPredicate: string;
