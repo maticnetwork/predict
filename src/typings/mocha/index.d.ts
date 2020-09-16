@@ -11,7 +11,8 @@ import {
   ConnectedPredicateRegistry, 
   ConnectedZeroXTrade,
   ConnectedZeroXExchange,
-  ConnectedShareToken
+  ConnectedShareToken,
+  ConnectedWithdrawManager
 } from '../../types'
 
 import { CheckpointHelper } from '@maticnetwork/plasma-test-utils'
@@ -33,6 +34,7 @@ declare module 'mocha' {
     maticTime: ConnectedTime;
     checkpointHelper: CheckpointHelper;
     predicateRegistry: ConnectedPredicateRegistry;
+    withdrawManager: ConnectedWithdrawManager;
     from: string;
     otherFrom: string;
   }

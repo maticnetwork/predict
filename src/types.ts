@@ -10,6 +10,7 @@ import { TimeControlled } from 'typechain/augur/TimeControlled'
 import { ZeroXTrade } from 'typechain/augur/ZeroXTrade'
 import { ZeroXExchange } from 'typechain/augur/ZeroXExchange'
 import { ShareToken } from 'typechain/augur/ShareToken'
+import { WithdrawManager } from 'typechain/core/WithdrawManager'
 
 import { ConnectedContract } from './deployedContracts'
 
@@ -54,3 +55,4 @@ export type ConnectedAugur = ConnectedContract<Augur>
 export type ConnectedTime = ConnectedContract<TimeControlled>
 export type ConnectedPredicateRegistry = ConnectedContract<PredicateRegistry>
 export type ConnectedZeroXExchange = ConnectedContract<ZeroXExchange>
+export type ConnectedWithdrawManager = ConnectedContract<WithdrawManager>

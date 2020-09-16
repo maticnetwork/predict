@@ -61,6 +61,7 @@ export interface ConnectedContract<T extends Contract> {
   other: T;
   fromAddress: string;
   otherAddress: string;
+  address: string;
 }
 
 export async function connectedContract<T extends Contract>(contractName: ContractName, type: ContractType): Promise<ConnectedContract<T>> {
@@ -71,6 +72,7 @@ export async function connectedContract<T extends Contract>(contractName: Contra
     from: contract.connect(provider.getSigner(0)) as T,
     other: contract.connect(provider.getSigner(1)) as T,
     fromAddress: await provider.getSigner(0).getAddress(),
-    otherAddress: await provider.getSigner(1).getAddress()
+    otherAddress: await provider.getSigner(1).getAddress(),
+    address: contract.address
   }
 }

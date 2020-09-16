@@ -10,7 +10,7 @@
     "typechain": "buidler typechain",
     "compile": "buidler compile && yarn typechain",
     "migrate:local": "truffle migrate --reset --network development",
-    "test": "npx mocha -r ts-node/register -r tsconfig-paths/register -r source-map-support/register --require mocha-steps --timeout 0 --watch-extensions ts \"test/**/*.ts\"",
+    "test": "npx mocha -r ts-node/register -r tsconfig-paths/register -r source-map-support/register -r mocha-steps --timeout 0 --watch-extensions ts \"test/**/*.ts\"",
     "test:truffle": "buidler test --network localhost",
     "testrpc:main": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 --port 9545",
     "testrpc:bor": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 --port 8545 --networkId 15001"
@@ -18,17 +18,11 @@
   "dependencies": {
     "@maticnetwork/eth-decoder": "^0.0.2",
     "@nomiclabs/buidler": "^1.4.5",
-    "@nomiclabs/buidler-ethers": "^2.0.0",
-    "@nomiclabs/buidler-waffle": "^2.1.0",
     "@openzeppelin/contracts": "^2.4.0",
     "@typechain/ethers-v5": "^1.0.0",
-    "@typechain/truffle-v5": "^2.0.2",
     "@types/chai": "^4.2.12",
     "@types/mocha": "^8.0.3",
     "@types/node": "^14.6.4",
-    "@yarnpkg/pnpify": "^2.2.1",
-    "async-file": "^2.0.2",
-    "babel-eslint": "^10.1.0",
     "bluebird": "^3.7.2",
     "chai": "^4.2.0",
     "ethereum-types": "^3.2.0",
@@ -50,10 +44,10 @@
     "tsconfig-paths": "^3.9.0",
     "typechain": "^2.0.0",
     "typescript": "^4.0.2",
-    "web3": "^1.2.4",
     "web3-eth-abi": "^1.2.11"
   },
   "devDependencies": {
+    "babel-eslint": "^10.1.0",
     "@typescript-eslint/eslint-plugin": "^4.0.1",
     "@typescript-eslint/parser": "^4.0.1",
     "eslint": "^7.8.1",

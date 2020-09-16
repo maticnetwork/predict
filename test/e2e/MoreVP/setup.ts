@@ -28,6 +28,7 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.otherFrom = otherFrom.address
 
   this.rootChain = await getDeployed(ContractName.RootChain, 'plasma')
+  this.withdrawManager = await connectedContract(ContractName.WithdrawManager, 'plasma')
   this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
 
   this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'predicate')
