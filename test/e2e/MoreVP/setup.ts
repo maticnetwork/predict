@@ -1,10 +1,9 @@
-import { ContractType } from 'src/types'
+import { ContractType, ContractName } from 'src/types'
 import { MAX_AMOUNT } from 'src/constants'
 import { Context } from 'mocha'
 import { EthWallets } from '../../shared/wallets'
 import { deployAll } from '../../shared/deployment/deployer'
 import { getDeployed, connectedContract, getAddress } from 'src/deployedContracts'
-import { ContractName } from 'src/types'
 import { CheckpointHelper } from '@maticnetwork/plasma-test-utils'
 import { MaticProvider } from 'src/providers'
 import { RootchainAdapter } from '../../shared/rootChainAdapter'
@@ -16,7 +15,8 @@ import ShareTokenArtifact from 'artifacts/predicate/ShareToken.json'
 import CashArtifact from 'artifacts/predicate/Cash.json'
 
 import { Cash } from 'typechain/augur/Cash'
-import { ShareToken } from 'typechain/predicate/ShareToken'
+import { ShareToken } from 'typechain/augur/ShareToken'
+
 
 const [from, otherFrom] = EthWallets
 const defaultCashAmount = 100000

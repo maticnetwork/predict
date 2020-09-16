@@ -18,7 +18,7 @@ import { Market } from 'typechain/augur/Market'
 
 use(solidity)
 
-describe.only('AugurPredicate: Claim Share Balance', function() {
+describe('AugurPredicate: Claim Share Balance', function() {
   const [from, otherFrom] = EthWallets
   const [maticFrom, maticOtherFrom] = MaticWallets
   const tradeGroupId = utils.hexZeroPad(utils.hexValue(42), 32)

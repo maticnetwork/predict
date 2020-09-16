@@ -1,5 +1,5 @@
 import { getDeployed, getAddress, createContract, connectedContract } from 'src/deployedContracts'
-import { DAY, MAX_AMOUNT } from '../../../src/constants'
+import { DEFAULT_MARKET_DURATION, MAX_AMOUNT } from '../../../src/constants'
 import { ContractType, ContractName, ConnectedUniverse } from 'src/types'
 
 import { Cash } from 'typechain/augur/Cash'
@@ -13,7 +13,7 @@ export async function deployReasonableYesNoMarket(universe: ConnectedUniverse, e
   return marketAddress
 }
 
-export async function deployMarket(currentTime: number, contractType: ContractType, duration: number = DAY): Promise<Market> {
+export async function deployMarket(currentTime: number, contractType: ContractType, duration: number = DEFAULT_MARKET_DURATION): Promise<Market> {
   const universe = await connectedContract<Universe>(ContractName.Universe, contractType)
   const repContract = await connectedContract<TestNetReputationToken>(ContractName.TestNetReputationToken, contractType)
   await repContract.from.faucet(0) // default amount

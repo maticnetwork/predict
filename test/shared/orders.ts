@@ -1,4 +1,4 @@
-import { constants, Wallet } from 'ethers'
+import { BigNumber, constants, Wallet } from 'ethers'
 import { Context } from 'mocha'
 import { ZeroXTrade } from 'typechain/augur/ZeroXTrade'
 import { ZeroXExchange } from 'typechain/augur/ZeroXExchange'
@@ -16,7 +16,38 @@ export interface OrderRequest {
   amount: number;
 }
 
-export async function createOrder(this: Context, request: OrderRequest, contractType: ContractType, from: Wallet, duration: number = 10000) {
+export interface Order {
+  orders: {
+    makerAddress: string;
+        takerAddress: string;
+        feeRecipientAddress: string;
+        senderAddress: string;
+        makerAssetAmount: BigNumber;
+        takerAssetAmount: BigNumber;
+        makerFee: BigNumber;
+        takerFee: BigNumber;
+        expirationTimeSeconds: BigNumber;
+        salt: BigNumber;
+        makerAssetData: string;
+        takerAssetData: string;
+        0: string;
+        1: string;
+        2: string;
+        3: string;
+        4: BigNumber;
+        5: BigNumber;
+        6: BigNumber;
+        7: BigNumber;
+        8: BigNumber;
+        9: BigNumber;
+        10: string;
+        11: string;
+  }[],
+  signatures: string[],
+  affiliateAddress: string
+}
+
+export async function createOrder(this: Context, request: OrderRequest, contractType: ContractType, from: Wallet, duration: number = 10000): Promise<Order> {
   // Zero X trading happens through the ZeroXTrade contract
   const { price, outcome, direction, currentTime, amount, marketAddress } = request
   // Get the on chain timestamp. We'll use this to calculate the order expiration and as the salt for the order
@@ -60,5 +91,5 @@ export async function createOrder(this: Context, request: OrderRequest, contract
   // No affiliate specified
   const affiliateAddress = constants.AddressZero
 
-  return { orders, signatures, affiliateAddress, _zeroXOrder }
+  return { orders, signatures, affiliateAddress }
 }
