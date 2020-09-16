@@ -1,17 +1,22 @@
-import { BuidlerConfig, usePlugin } from '@nomiclabs/buidler/config'
+import { BuidlerConfig } from '@nomiclabs/buidler/config'
+import { parseEther } from 'ethers/lib/utils'
 
 import './tasks/typechain'
 import './tasks/compile'
 import './tasks/install'
 
-usePlugin('@nomiclabs/buidler-ethers')
-usePlugin('@nomiclabs/buidler-waffle')
-
 const config: BuidlerConfig = {
-  defaultNetwork: 'localhost',
   networks: {
-    localhost: {
-      url: 'http://127.0.0.1:9545'
+    buidlerevm: {
+      gasPrice: 0,
+      gas: 10000000,
+      blockGasLimit: 10000000,
+      accounts: [
+        { privateKey: '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a', balance: parseEther('10000').toString() },
+        { privateKey: '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712', balance: parseEther('10000').toString() }
+      ],
+      chainId: 15001,
+      networkId: 15001
     }
   },
   mocha: {

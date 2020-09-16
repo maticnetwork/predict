@@ -20,7 +20,7 @@ import { Cash } from 'typechain/augur/Cash'
 
 use(solidity)
 
-describe.only('AugurPredicate: Claim Share Balance', function() {
+describe('AugurPredicate: Claim Share Balance', function() {
   const [from, otherFrom] = EthWallets
   const [maticFrom, maticOtherFrom] = MaticWallets
   const tradeGroupId = utils.hexZeroPad(utils.hexValue(42), 32)
@@ -150,7 +150,7 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
       })
 
       describe('when Alice and Bob claims their shares', function() {
-        describe('when Bob initializes exit', function() {
+        describe('when Bob initializes exit from the last uncensored trade', function() {
           before('Initialize exit', async function() {
             await this.augurPredicate.other.clearExit(otherFrom.address)
             const contracts = await initializeAugurPredicateExit.call(this, otherFrom)
@@ -257,6 +257,8 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
 
   describe('when Bob exits', function() {
     describe('when market is not finalized', function() {
+      let beforeOIBalancePredicate: BigNumber
+
       it('should start exit', async function() {
         // otherAccount is starting an exit for 700 shares of outcome 0 and 2 (balance from tests above)
         const exitId = await this.augurPredicate.contract.getExitId(otherFrom.address)
@@ -268,13 +270,20 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
       })
   
       it('should exit', async function() {
-        const beforeOIBalancePredicate = await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+        beforeOIBalancePredicate = await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
     
         await processExits.call(this, this.rootOICash.address)
-    
+      })
+
+      it('should have correct shares on ethereum',async function() {
         await assertTokenBalances(this.shareToken.contract, rootMarket.address, otherFrom.address, [700, 0, 700])
+      })
+
+      it('augur predicate should have correct shares on ethereum', async function() {
         await assertTokenBalances(this.shareToken.contract, rootMarket.address, this.augurPredicate.address, [0, 700, 0])
-  
+      })
+
+      it('augur predicate should have correct OICash balance on ethereum', async function() {
         expect(
           await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
         ).to.be.eq(beforeOIBalancePredicate.sub(bobExitCashBalanceBeforeExit).sub(700 * 100)) // predicate bought 700 complete sets
@@ -313,21 +322,21 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
         await processExits.call(this, this.rootOICash.address)
       })
 
-      it('Alice shares balance must be 0 for all outcomes', async function() {
+      it('Alice must have 0 shares for all outcomes on ethereum', async function() {
         await assertTokenBalances(this.shareToken.contract, rootMarket.address, from.address, [0, 0, 0])
       })
 
-      it('augur predicate shares balance must be 0 for all outcomes', async function() {
+      it('augur predicate must have 0 shares for all outcomes on ethereum', async function() {
         await assertTokenBalances(this.shareToken.contract, rootMarket.address, this.augurPredicate.address, [0, 0, 0])
       })
 
-      it('Alice cash balance must be correct',async function() {
+      it('Alice must have correct cash balance on ethereum',async function() {
         expect(
           await this.cash.contract.balanceOf(from.address)
         ).to.be.eq(beforeCashBalance.add(700 * 100))
       })
 
-      it('augur predicate cash balance must stay unchanged', async function() {
+      it('augur predicate ethereum cash balance must stay unchanged', async function() {
         expect(
           await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
         ).to.be.eq(beforeOIBalancePredicate)
