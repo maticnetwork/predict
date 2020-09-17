@@ -8,7 +8,7 @@ import { ContractName } from 'src/types'
 import { execShellCommand } from 'src/execShellCommand'
 import { deployContract } from 'ethereum-waffle'
 import { EthProvider } from 'src/providers'
-import { EthWallets } from './../wallets'
+import { EthWallets } from 'src/wallets'
 import { utils } from 'ethers'
 
 import PredicateRegistryArtifact from 'artifacts/PredicateRegistry.json'

@@ -1,15 +1,17 @@
+import { deployMarket } from './augur'
+import { Context } from 'mocha'
+import { Market } from 'typechain/augur/Market'
+import { Signer } from 'ethers'
+import { deployContract } from 'ethereum-waffle'
 import { ContractType, ContractName } from 'src/types'
 import { MAX_AMOUNT } from 'src/constants'
-import { Context } from 'mocha'
-import { EthWallets } from '../../shared/wallets'
-import { deployAll } from '../../shared/deployment/deployer'
+import { EthWallets } from './wallets'
+import { deployAll } from './deployer'
 import { getDeployed, connectedContract, getAddress } from 'src/deployedContracts'
 import { CheckpointHelper } from '@maticnetwork/plasma-test-utils'
 import { MaticProvider } from 'src/providers'
-import { RootchainAdapter } from '../../shared/rootChainAdapter'
+import { RootchainAdapter } from './rootChainAdapter'
 import { EthersAdapter } from '@maticnetwork/plasma'
-import { Signer } from 'ethers'
-import { deployContract } from 'ethereum-waffle'
 
 import ShareTokenArtifact from 'artifacts/predicate/ShareToken.json'
 import CashArtifact from 'artifacts/predicate/Cash.json'
@@ -17,6 +19,33 @@ import CashArtifact from 'artifacts/predicate/Cash.json'
 import { Cash } from 'typechain/augur/Cash'
 import { ShareToken } from 'typechain/augur/ShareToken'
 
+export interface MarketInfo {
+  numTicks: number;
+  address: string;
+  currentTime: number;
+  rootMarket: Market;
+}
+
+export async function createMarket(this: Context): Promise<MarketInfo> {
+  // Create market on main chain augur
+  let currentTime = (await this.augur.contract.getTimestamp()).toNumber()
+  const rootMarket = await deployMarket(currentTime, 'augur-main')
+
+  // Create corresponding market on Matic
+  currentTime = (await this.maticAugur.contract.getTimestamp()).toNumber()
+  const market = await deployMarket(currentTime, 'augur-matic')
+
+  const numOutcomes = await rootMarket.getNumberOfOutcomes()
+  const numTicks = (await rootMarket.getNumTicks()).toNumber()
+  await this.predicateRegistry.from.mapMarket(
+    market.address,
+    rootMarket.address,
+    numOutcomes,
+    numTicks
+  )
+
+  return { numTicks, address: market.address, currentTime, rootMarket }
+}
 
 const [from, otherFrom] = EthWallets
 const defaultCashAmount = 100000
@@ -66,6 +95,7 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await this.maticCash.from.faucet(defaultCashAmount)
   await this.maticCash.other.faucet(defaultCashAmount)
 }
+
 
 export async function approveAllForCashAndShareTokens(contractType: ContractType) {
   const cash = await connectedContract<Cash>(ContractName.Cash, contractType)

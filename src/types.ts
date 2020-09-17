@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers'
+import { BigNumber, Wallet } from 'ethers'
 
 import { Cash } from 'typechain/augur/Cash'
 import { OiCash } from 'typechain/augur/OiCash'
@@ -57,3 +57,9 @@ export type ConnectedTime = ConnectedContract<TimeControlled>
 export type ConnectedPredicateRegistry = ConnectedContract<PredicateRegistry>
 export type ConnectedZeroXExchange = ConnectedContract<ZeroXExchange>
 export type ConnectedWithdrawManager = ConnectedContract<WithdrawManager>
+
+
+export interface Counterparty {
+  name: string;
+  wallet: Wallet;
+}

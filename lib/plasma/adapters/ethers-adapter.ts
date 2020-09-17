@@ -1,6 +1,6 @@
 import { IProviderAdapter } from './IProviderAdapter'
 import { utils, providers, Transaction, BigNumber } from 'ethers'
-import { KECCAK256_NULL } from 'ethereumjs-util'
+import { BN, KECCAK256_NULL } from 'ethereumjs-util'
 import { SerializableTransaction, Block, TransactionReceipt } from '../types'
 
 // eslint-disable-next-line
@@ -23,21 +23,21 @@ export class EthersAdapter implements IProviderAdapter {
       data: tx.data,
       hash: tx.hash!,
       blockHash: tx.hash,
-      transactionIndex: 0
+      transactionIndex: new BN(0)
     }
   }
 
   private transformRpcTx(tx: any): SerializableTransaction {
     return {
       to: tx.to!,
-      gasPrice: tx.gasPrice,
-      gasLimit: tx.gas,
-      value: tx.value,
+      gasPrice: utils.hexValue(tx.gasPrice),
+      gasLimit: utils.hexValue(tx.gas),
+      value: utils.hexValue(tx.value),
       nonce: utils.hexValue(tx.nonce),
       data: tx.input,
       hash: tx.hash,
       blockHash: tx.blockHash,
-      transactionIndex: BigNumber.from(tx.transactionIndex).toNumber()
+      transactionIndex: new BN(tx.transactionIndex)
     }
   }
 
@@ -107,7 +107,7 @@ export class EthersAdapter implements IProviderAdapter {
       contractAddress: txData.contractAddress,
       blockNumber: txData.blockNumber,
       logs: txData.logs,
-      transactionIndex: txData.transactionIndex,
+      transactionIndex: new BN(txData.transactionIndex),
       cumulativeGasUsed: txData.cumulativeGasUsed.toNumber(),
       gasUsed: txData.gasUsed.toNumber(),
       status: txData.status!,

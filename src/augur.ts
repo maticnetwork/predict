@@ -1,5 +1,5 @@
 import { getDeployed, getAddress, createContract, connectedContract } from 'src/deployedContracts'
-import { DEFAULT_MARKET_DURATION, MAX_AMOUNT } from '../../../src/constants'
+import { DEFAULT_MARKET_DURATION, MAX_AMOUNT } from './constants'
 import { ContractType, ContractName, ConnectedUniverse } from 'src/types'
 
 import { Cash } from 'typechain/augur/Cash'

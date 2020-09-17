@@ -6,14 +6,17 @@ import { rlp, bufferToHex, toBuffer } from 'ethereumjs-util'
 import assert from 'assert'
 
 export async function buildExitReference(provider: IProviderAdapter, block: Block, tx: SerializableTransaction, receipt: TransactionReceipt): Promise<ExitReference> {
-  const receiptProof = await getReceiptProof(provider, receipt, block, [receipt])
+  const receiptProof = await getReceiptProof(provider, receipt, block)
   const txProof = await getTxProof(tx, block)
   return {
     receipt: getReceiptBytes(receipt), // rlp encoded
     receiptParentNodes: receiptProof.parentNodes,
     tx: getTxBytes(tx), // rlp encoded
     txParentNodes: txProof.parentNodes,
-    path: receiptProof.path,
+    path: Buffer.concat([
+      Buffer.from('00', 'hex'),
+      receiptProof.path
+    ]),
     transactionsRoot: toBuffer(block.transactionsRoot),
     receiptsRoot: toBuffer(block.receiptsRoot)
   }
@@ -138,13 +141,13 @@ function _buildReferenceTxPayload(input: ExitPayload) {
   return [
     headerNumber,
     bufferToHex(Buffer.concat(blockProof)),
-    blockNumber,
+    blockNumber.toNumber(),
     blockTimestamp.toNumber(),
     bufferToHex(reference.transactionsRoot),
     bufferToHex(reference.receiptsRoot),
     bufferToHex(reference.receipt),
     bufferToHex(rlp.encode(reference.receiptParentNodes)),
-    bufferToHex(rlp.encode(reference.path)), // branch mask,
+    bufferToHex(reference.path), // branch mask,
     logIndex
   ]
 }

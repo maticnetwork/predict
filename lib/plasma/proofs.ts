@@ -1,7 +1,8 @@
-import BN from 'bn.js'
 const Trie = require('merkle-patricia-tree')
+const EthereumTransaction = require('ethereumjs-tx')
+
+import BN from 'bn.js'
 import { rlp, keccak256, toBuffer, bufferToHex } from 'ethereumjs-util'
-import { Transaction as EthereumTransaction } from 'ethereumjs-tx'
 import { MerkleTree } from './merkle'
 import { Block, SerializableTransaction, TransactionReceipt, ExitProof } from './types'
 import { IProviderAdapter } from './adapters/IProviderAdapter'
@@ -55,18 +56,17 @@ async function findProof(trie: any, key: Buffer, rootHash: Buffer, blockHash?: s
   })
 
   const proof = path.stack.map(s => s.raw)
-  // const valueFromKey = await Trie.verifyProof(rootHash, key, proof)
 
   return {
     blockHash: toBuffer(blockHash),
     parentNodes: proof,
     root: rootHash,
-    path: Buffer.concat([key]),
+    path: key,
     value: rlp.decode(path.node.value)
   }
 }
 
-function getTriePath(data: { transactionIndex: number|null }): Buffer {
+function getTriePath(data: { transactionIndex: number|BN|null }): Buffer {
   return rlp.encode(data.transactionIndex)
 }
 
@@ -74,8 +74,6 @@ export async function getTxProof(tx: SerializableTransaction, block: Block): Pro
   const txTrie = new Trie()
   for (let i = 0; i < block.transactions.length; i++) {
     const siblingTx = block.transactions[i]
-    const rawSignedSiblingTx = getTxBytes(siblingTx)
-    // await txTrie.put(getTriePath(siblingTx), rawSignedSiblingTx).catch(console.log)
     await new Promise((resolve, reject) => {
       txTrie.put(getTriePath(siblingTx), getTxBytes(siblingTx), (err: any) => {
         if (err) {
@@ -134,7 +132,7 @@ export async function getReceiptProof(provider: IProviderAdapter, receipt: Trans
 
 export function getReceiptBytes(receipt: TransactionReceipt): Buffer {
   return rlp.encode([
-    toBuffer(receipt.status ? 1 : 0),
+    toBuffer(receipt.status ? '0x1' : '0x'),
     toBuffer(receipt.cumulativeGasUsed),
     toBuffer(receipt.logsBloom),
 

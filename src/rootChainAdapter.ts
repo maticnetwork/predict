@@ -1,7 +1,6 @@
 import { RootChain } from 'typechain/core/RootChain'
 import { RootChainBlockHeader } from '@maticnetwork/plasma'
 import { RootChainReadWrite, NewHeaderBlock } from '@maticnetwork/plasma-test-utils'
-import { ContractInterface } from 'ethers'
 
 export class RootchainAdapter implements RootChainReadWrite {
   private rootchain: RootChain

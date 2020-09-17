@@ -2,8 +2,8 @@ import assert from 'assert'
 import { buildReferenceTxPayload } from './test/helpers/checkpointUtils'
 import * as utils from './test/helpers/utils'
 import { deployAll } from './test/shared/deployment/deployer'
-import { processExits, initializeExit } from './test/shared/exits'
-import { createMarket } from './test/shared/setup'
+import { processExits, initializeExit } from './src/exits'
+import { createMarket } from './src/setup'
 import StatefulUtils from './test/helpers/StatefulUtils'
 
 const { artifacts, web3, childWeb3, otherAccount, from, gas } = utils

@@ -9,9 +9,9 @@ import assert from 'assert'
 import { buildReferenceTxPayload } from './lib/checkpointUtils'
 import * as utils from './lib/utils'
 import { deployAll } from './test/shared/deployment/deployer'
-import { processExits, initializeExit } from './test/shared/exits'
+import { processExits, initializeExit } from './src/exits'
 import StatefulUtils from './lib/StatefulUtils'
-import { createMarket } from './test/shared/setup'
+import { createMarket } from './src/setup'
 
 chai.use(solidity)
 const { expect } = chai

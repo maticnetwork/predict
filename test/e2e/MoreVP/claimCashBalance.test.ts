@@ -4,16 +4,16 @@ import { toBuffer } from 'ethereumjs-util'
 import { BigNumber, ContractReceipt, utils } from 'ethers'
 
 import { ContractName } from 'src/types'
-import { EthWallets, MaticWallets } from '../../shared/wallets'
+import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { AUGUR_FEE, MATIC_CHAIN_ID } from 'src/constants'
-import { createOrder, Order } from '../../shared/orders'
+import { AUGUR_FEE, MATIC_CHAIN_ID, DEFAULT_TRADE_GROUP } from 'src/constants'
+import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit } from './setup'
-import { createMarket } from '../../shared/setup'
-import { indexOfEvent } from '../../shared/events'
-import { assertTokenBalances } from '../../shared/assert'
-import { processExits } from '../../shared/exits'
+import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit } from 'src/setup'
+import { createMarket } from 'src/setup'
+import { indexOfEvent } from 'src/events'
+import { assertTokenBalances } from 'src/assert'
+import { processExits } from 'src/exits'
 
 import { Market } from 'typechain/augur/Market'
 import { ShareToken } from 'typechain/augur/ShareToken'
@@ -21,10 +21,10 @@ import { Cash } from 'typechain/augur/Cash'
 
 use(solidity)
 
-describe.only('AugurPredicate: Claim Share Balance', function() {
+describe('AugurPredicate: Claim Share Balance', function() {
   const [from, otherFrom] = EthWallets
   const [maticFrom, maticOtherFrom] = MaticWallets
-  const tradeGroupId = utils.hexZeroPad(utils.hexValue(42), 32)
+  const tradeGroupId = DEFAULT_TRADE_GROUP
   const validatorWallets = EthWallets.map(x => {
     return { address: x.address, privateKey: toBuffer(x.privateKey) }
   })
@@ -114,7 +114,7 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
       })
     })
 
-    describe('Bob is trying to fill second order but being censored', function() {
+    describe('Bob is trying to fill second order but has been censored', function() {
       let inFlightTrade: string
       let bobExit: ExitPayload
       let bobExitShareToken: ShareToken

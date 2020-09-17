@@ -15,7 +15,7 @@ export interface TransactionReceipt {
   blockHash: string;
   blockNumber: number;
   transactionHash: string;
-  transactionIndex: number|null;
+  transactionIndex: number|BN|null;
   from: string;
   to: string;
   status: null | string | number;
@@ -40,7 +40,7 @@ export interface SerializableTransaction {
   v?: string;
   r?: string;
   s?: string;
-  transactionIndex: number|null;
+  transactionIndex: number|BN|null;
 }
 
 export interface Block {
