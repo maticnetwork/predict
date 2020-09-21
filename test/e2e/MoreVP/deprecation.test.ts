@@ -1,6 +1,6 @@
 import { use, expect } from 'chai'
 import { solidity } from 'ethereum-waffle'
-import { BigNumber, ContractReceipt, utils } from 'ethers'
+import { BigNumber, ContractReceipt } from 'ethers'
 
 import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from 'src/wallets'
@@ -24,7 +24,7 @@ import { MaticProvider } from 'src/providers'
 
 use(solidity)
 
-describe.only('AugurPredicate: Deprecation', function() {
+describe('AugurPredicate: Deprecation', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
@@ -49,7 +49,7 @@ describe.only('AugurPredicate: Deprecation', function() {
   })
 
   shouldExecuteTrade({
-    orderAmount: 1000,
+    orderAmount: firstOrderAmount,
     sharePrice: 60,
     fillAmount,
     returnValues: firstTradeResult,
@@ -63,7 +63,7 @@ describe.only('AugurPredicate: Deprecation', function() {
         this, 
         { 
           marketAddress: market.address, 
-          amount: 1000, 
+          amount: firstOrderAmount, 
           price: 60, 
           currentTime: market.currentTime, 
           outcome: 1,
@@ -145,7 +145,7 @@ describe.only('AugurPredicate: Deprecation', function() {
             describe('when Bob performed cash transfer', function() {
               let receipt: ContractReceipt
   
-              before('', async function() {
+              before('Transfer', async function() {
                 const transfer = await this.maticCash.other.transfer('0x0000000000000000000000000000000000000001', 0)
                 receipt = await transfer.wait(0)
   
@@ -232,7 +232,7 @@ describe.only('AugurPredicate: Deprecation', function() {
     before('Bob trades 1 more time', async function() {
       // use raw transaction creation, due to ganache using default chainId 1337
       const txObj = {
-        gasLimit: 5000000,
+        gasLimit: DEFAULT_GAS,
         gasPrice: 0,
         to: this.maticZeroXTrade.contract.address,
         value: AUGUR_FEE,
