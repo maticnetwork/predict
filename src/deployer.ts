@@ -7,7 +7,7 @@ import { getDeployed, getAddress } from 'src/deployedContracts'
 import { ContractName } from 'src/types'
 import { execShellCommand } from 'src/execShellCommand'
 import { deployContract } from 'ethereum-waffle'
-import { EthProvider } from 'src/providers'
+import { EthProvider, getProvider } from 'src/providers'
 import { EthWallets } from 'src/wallets'
 import { utils } from 'ethers'
 

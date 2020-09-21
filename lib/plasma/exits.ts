@@ -1,8 +1,10 @@
+const rlp = require('rlp')
+
 import BN from 'bn.js'
 import { buildBlockHeaderMerkle, serializeBlockHeader, getReceiptProof, getTxProof, getReceiptBytes, getTxBytes } from './proofs'
 import { RootChainReadOnly, ExitReference, ExitPayload, Block, SerializableTransaction, TransactionReceipt, ExitData } from './types'
 import { IProviderAdapter } from './adapters/IProviderAdapter'
-import { rlp, bufferToHex, toBuffer } from 'ethereumjs-util'
+import { bufferToHex, toBuffer } from 'ethereumjs-util'
 import assert from 'assert'
 
 export async function buildExitReference(provider: IProviderAdapter, block: Block, tx: SerializableTransaction, receipt: TransactionReceipt): Promise<ExitReference> {
@@ -17,8 +19,8 @@ export async function buildExitReference(provider: IProviderAdapter, block: Bloc
       Buffer.from('00', 'hex'),
       receiptProof.path
     ]),
-    transactionsRoot: toBuffer(block.transactionsRoot),
-    receiptsRoot: toBuffer(block.receiptsRoot)
+    transactionsRoot: toBuffer(txProof.root),
+    receiptsRoot: toBuffer(receiptProof.root)
   }
 }
 
@@ -141,8 +143,8 @@ function _buildReferenceTxPayload(input: ExitPayload) {
   return [
     headerNumber,
     bufferToHex(Buffer.concat(blockProof)),
-    blockNumber.toNumber(),
-    blockTimestamp.toNumber(),
+    blockNumber,
+    blockTimestamp,
     bufferToHex(reference.transactionsRoot),
     bufferToHex(reference.receiptsRoot),
     bufferToHex(reference.receipt),

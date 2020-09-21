@@ -18,10 +18,10 @@ export interface TransactionReceipt {
   transactionIndex: number|BN|null;
   from: string;
   to: string;
-  status: null | string | number;
+  status: null | string | number | boolean;
   cumulativeGasUsed: number;
   gasUsed: number;
-  contractAddress: string | null;
+  contractAddress?: string | null;
   logs: LogEntry[];
   logsBloom: string;
 }

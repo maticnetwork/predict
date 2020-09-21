@@ -4,7 +4,7 @@ import { EthProvider, MaticProvider } from 'src/providers'
 import { ConnectedTime } from 'src/types'
 
 async function increaseChainTime(time: ConnectedTime, provider: providers.JsonRpcProvider, seconds: number) {
-  const block = await EthProvider.getBlock('latest')
+  const block = await provider.getBlock('latest')
   await time.from.setTimestamp(block.timestamp + seconds)
   await provider.send('evm_increaseTime', [seconds])
 }

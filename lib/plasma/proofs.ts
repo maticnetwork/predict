@@ -1,8 +1,9 @@
 const Trie = require('merkle-patricia-tree')
 const EthereumTransaction = require('ethereumjs-tx')
+const rlp = require('rlp')
 
 import BN from 'bn.js'
-import { rlp, keccak256, toBuffer, bufferToHex } from 'ethereumjs-util'
+import { keccak256, toBuffer, bufferToHex } from 'ethereumjs-util'
 import { MerkleTree } from './merkle'
 import { Block, SerializableTransaction, TransactionReceipt, ExitProof } from './types'
 import { IProviderAdapter } from './adapters/IProviderAdapter'
@@ -32,13 +33,13 @@ export async function buildBlockHeaderMerkle(provider: IProviderAdapter, start: 
   return new MerkleTree(blocks.map(b => serializeBlockHeader(b)))
 }
 
-async function findProof(trie: any, key: Buffer, rootHash: Buffer, blockHash?: string): Promise<ExitProof> {
+async function findProof(trie: any, key: Buffer, blockHash?: string): Promise<ExitProof> {
   const path: {
     node: any,
     stack: any[],
     reminder: any[]
   } = await new Promise((resolve, reject) => {
-    trie.findPath(key, (err: any, rawTxNode: any, reminder: any, stack: any) => {
+    trie.findPath(key, (err: any, rawTxNode: any, reminder: any[], stack: any) => {
       if (err) {
         return reject(err)
       }
@@ -60,7 +61,7 @@ async function findProof(trie: any, key: Buffer, rootHash: Buffer, blockHash?: s
   return {
     blockHash: toBuffer(blockHash),
     parentNodes: proof,
-    root: rootHash,
+    root: toBuffer(trie.root),
     path: key,
     value: rlp.decode(path.node.value)
   }
@@ -88,7 +89,6 @@ export async function getTxProof(tx: SerializableTransaction, block: Block): Pro
   return findProof(
     txTrie,
     getTriePath(tx),
-    toBuffer(block.transactionsRoot),
     tx.blockHash
   )
 }
@@ -125,14 +125,13 @@ export async function getReceiptProof(provider: IProviderAdapter, receipt: Trans
   return findProof(
     receiptsTrie,
     getTriePath(receipt),
-    toBuffer(block.receiptsRoot),
     receipt.blockHash
   )
 }
 
 export function getReceiptBytes(receipt: TransactionReceipt): Buffer {
   return rlp.encode([
-    toBuffer(receipt.status ? '0x1' : '0x'),
+    toBuffer(receipt.status ? '0x1' : '0x0'),
     toBuffer(receipt.cumulativeGasUsed),
     toBuffer(receipt.logsBloom),
 

@@ -1,2 +1,2 @@
 export * from './IProviderAdapter'
-export * from './ethers-adapter'
+export * from './json-rpc-adapter'

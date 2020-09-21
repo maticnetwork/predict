@@ -10,7 +10,7 @@ import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload, buildChallengeData } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
 import { createMarket } from 'src/setup'
-import { indexOfEvent } from 'src/events'
+import { findEvents, indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'
 import { processExits, finalizeMarket } from 'src/exits'
 import { Market } from 'typechain/augur/Market'
@@ -226,15 +226,27 @@ describe.only('AugurPredicate: Deprecation', function() {
     })
   })
 
-  describe('when Bob executes trade 1 more time', function() {
+  describe('when Bob executes trades 1 more time', function() {
     let challengedExit: ExitPayload
 
-    before('Bob trade 1 more time', async function() {
-      const receipt = await (await 
-        this.maticZeroXTrade.other.trade(100, secondOrder.affiliateAddress, tradeGroupId, secondOrder.orders, secondOrder.signatures)  
-      ).wait(0)
+    before('Bob trades 1 more time', async function() {
+      // use raw transaction creation, due to ganache using default chainId 1337
+      const txObj = {
+        gasLimit: 5000000,
+        gasPrice: 0,
+        to: this.maticZeroXTrade.contract.address,
+        value: AUGUR_FEE,
+        chainId: MATIC_CHAIN_ID,
+        nonce: await bobMatic.getTransactionCount(),
+        data: this.maticZeroXTrade.contract.interface.encodeFunctionData('trade', 
+          [100, secondOrder.affiliateAddress, tradeGroupId, secondOrder.orders, secondOrder.signatures]
+        )
+      }
+
+      const tx = await bobMatic.signTransaction(txObj)
+      const receipt = await (await MaticProvider.sendTransaction(tx)).wait(0)
       challengedExit = await this.checkpointHelper.submitCheckpoint(VALIDATORS, receipt.transactionHash, alice.address)
-      challengedExit.logIndex = 0
+      challengedExit.logIndex = 0 // this is the index of the order signed by the exitor whose exit is being challenged
     })
 
     it('Alice should challenge Bob\'s exit', async function() {

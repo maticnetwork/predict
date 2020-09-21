@@ -69,7 +69,6 @@ export async function createOrder(this: Context, request: OrderRequest, contract
   )
 
   // append signature type byte that is required by Augur
-  // const signature = await signatureUtils.ecSignHashAsync(from.provider, _orderHash, from.address)
   const signature = bufferToHex(
     Buffer.concat(
       [
