@@ -8,9 +8,6 @@ set -e
 trap cleanup EXIT
 trap cleanup SIGTERM
 
-# get current directory
-PWD=$(pwd)
-
 cleanup() {
   echo "Cleaning up"
   pkill -f ganache-cli
