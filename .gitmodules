@@ -6,4 +6,4 @@
 	url = git@github.com:imyourm8/augur.git
 [submodule "augur"]
 	path = augur
-	url = git@github.com:atvanguard/augur.git
+	url = git@github.com:imyourm8/augur.git
