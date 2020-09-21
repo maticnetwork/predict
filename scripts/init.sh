@@ -4,6 +4,8 @@
 set -o errexit
 set -e
 
+yarn
+
 npm --prefix "core-contracts" install
 npm --prefix "core-contracts" run template:process
 
