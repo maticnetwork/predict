@@ -22,7 +22,7 @@ import { shouldExecuteCensoredTrade } from '../../behaviors/shouldExecuteCensore
 
 use(solidity)
 
-describe.skip('AugurPredicate: Claim Cash Balance', function() {
+describe('AugurPredicate: Claim Cash Balance', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
