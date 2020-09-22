@@ -22,5 +22,3 @@ echo "Giving 5 seconds for testrpc startup..."
 sleep 5
 
 yarn test
-
-

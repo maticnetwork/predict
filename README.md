@@ -16,6 +16,11 @@ cd predicate/packages/augur-core
 # Install dependencies by following instructions from the README in this directory
 ```
 
+### Compile contracts and generate typescript typings
+```
+yarn compile
+```
+
 ### Run test
 ```
 ./scripts/test.sh
