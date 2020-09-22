@@ -16,16 +16,16 @@ import { processExits } from 'src/exits'
 
 import { ShareToken } from 'typechain/augur/ShareToken'
 import { Cash } from 'typechain/augur/Cash'
-import { shouldExecuteTrade, TradeReturnValues } from './behaviors/shouldExecuteTrade'
+import { shouldExecuteTrade, TradeReturnValues } from '../../behaviors/shouldExecuteTrade'
 import { Context } from 'mocha'
-import { shouldExecuteCensoredTrade } from './behaviors/shouldExecuteCensoredTrade'
+import { shouldExecuteCensoredTrade } from '../../behaviors/shouldExecuteCensoredTrade'
 
 use(solidity)
 
 describe('Exit with burnt shares', function() {
   before(deployAndPrepareTrading)
   before('Prepare trading', async function() {
-    market = await createMarket.call(this)
+    // market = await createMarket.call(this)
 
     await approveAllForCashAndShareTokens('augur-matic')
   })

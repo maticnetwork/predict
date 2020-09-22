@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { AUGUR_FEE, ASK_ORDER } from 'src/constants'
 import { Counterparty } from 'src/types'
-import { createOrder, Order } from 'src/orders'
+import { Order } from 'src/orders'
 import { assertTokenBalances } from 'src/assert'
 import { BigNumber, ContractReceipt } from "ethers"
 import { MarketInfo } from 'src/setup'
@@ -79,7 +79,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions) {
     it(`${orderCreator.name} must have correct cash balance`, async function() {
       expect(
         await this.maticCash.contract.balanceOf(orderCreator.wallet.address)
-      ).to.be.equal(orderCreatorInitialBalance.sub(filledAmount * sharePrice))
+      ).to.be.gte(orderCreatorInitialBalance.sub(filledAmount * sharePrice))
     })
 
     it(`${orderFiller.name} must have correct market balance outcome`, async function() {
@@ -89,7 +89,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions) {
     it(`${orderFiller.name} must have correct cash balance`, async function() {
       expect(
         await this.maticCash.contract.balanceOf(orderFiller.wallet.address)
-      ).to.be.equal(orderFillerInitialBalance.sub(filledAmount * (market.numTicks - sharePrice)))
+      ).to.be.gte(orderFillerInitialBalance.sub(filledAmount * (market.numTicks - sharePrice)))
     })
   })
 }

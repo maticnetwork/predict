@@ -5,20 +5,18 @@ import { BigNumber, ContractReceipt } from 'ethers'
 import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { ASK_ORDER, AUGUR_FEE, BID_ORDER, DEFAULT_GAS, DEFAULT_TRADE_GROUP, MATIC_CHAIN_ID, VALIDATORS } from 'src/constants'
+import { ASK_ORDER, AUGUR_FEE, BID_ORDER, DEFAULT_GAS, DEFAULT_TRADE_GROUP, MATIC_CHAIN_ID, VALIDATORS, NO_OUTCOME, INVALID_OUTCOME } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload, buildChallengeData } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
 import { createMarket } from 'src/setup'
-import { findEvents, indexOfEvent } from 'src/events'
+import { indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'
-import { processExits, finalizeMarket } from 'src/exits'
-import { Market } from 'typechain/augur/Market'
 import { ShareToken } from 'typechain/augur/ShareToken'
 import { Cash } from 'typechain/augur/Cash'
 
-import { shouldExecuteTrade, TradeReturnValues } from './behaviors/shouldExecuteTrade'
-import { shouldExecuteCensoredTrade } from './behaviors/shouldExecuteCensoredTrade'
+import { shouldExecuteTrade, TradeReturnValues } from '../../behaviors/shouldExecuteTrade'
+import { shouldExecuteCensoredTrade } from '../../behaviors/shouldExecuteCensoredTrade'
 import { Context } from 'mocha'
 import { MaticProvider } from 'src/providers'
 
@@ -66,7 +64,7 @@ describe('AugurPredicate: Deprecation', function() {
           amount: firstOrderAmount, 
           price: 60, 
           currentTime: market.currentTime, 
-          outcome: 1,
+          outcome: NO_OUTCOME,
           direction: BID_ORDER
         }, 
         'augur-matic', 
@@ -80,15 +78,18 @@ describe('AugurPredicate: Deprecation', function() {
   })
 
   describe('Bob is trying to fill second order but has been censored', function() {
+    const secondOrderAmount = 300
+    const secondOrderSharePrice = 30
+
     before('Alice creates order', async function() {
       secondOrder = await createOrder.call(
         this, 
         { 
           marketAddress: market.address, 
-          amount: 300, 
-          price: 70, 
+          amount: secondOrderAmount, 
+          price: secondOrderSharePrice, 
           currentTime: market.currentTime, 
-          outcome: 1,
+          outcome: NO_OUTCOME,
           direction: ASK_ORDER
         }, 
         'augur-matic', 
@@ -111,7 +112,7 @@ describe('AugurPredicate: Deprecation', function() {
   
         after(async function() {
           // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
-          await this.augurPredicate.other.claimShareBalanceFaucet(bob.address, market.address, 2, firstOrderFilledAmount)
+          await this.augurPredicate.other.claimShareBalanceFaucet(bob.address, market.address, INVALID_OUTCOME, firstOrderFilledAmount)
         })
   
         describe('when Bob claims his shares', function() {
@@ -125,7 +126,7 @@ describe('AugurPredicate: Deprecation', function() {
               }, {
                 account: alice.address,
                 market: market.address,
-                outcome: 1
+                outcome: NO_OUTCOME
               })
             })
   
@@ -135,9 +136,7 @@ describe('AugurPredicate: Deprecation', function() {
             })
   
             it('Alice should have correct market outcome balance', async function() {
-              expect(
-                await bobExitShareToken.balanceOfMarketOutcome(market.rootMarket.address, 1, alice.address)
-              ).to.be.equal(firstOrderFilledAmount)
+              await assertTokenBalances(bobExitShareToken, market.rootMarket.address, alice.address, [0, firstOrderFilledAmount, 0])
             })
           })
   
@@ -146,6 +145,7 @@ describe('AugurPredicate: Deprecation', function() {
               let receipt: ContractReceipt
   
               before('Transfer', async function() {
+                // dummy transfer to build a proof of funds
                 const transfer = await this.maticCash.other.transfer('0x0000000000000000000000000000000000000001', 0)
                 receipt = await transfer.wait(0)
   
@@ -173,19 +173,23 @@ describe('AugurPredicate: Deprecation', function() {
     })
   
     shouldExecuteCensoredTrade({
-      orderAmount: 300,
-      sharePrice: 70,
+      orderAmount: secondOrderAmount,
       tradeGroupId,
       market: async () => market,
       exitShare: async () => bobExitShareToken,
       exitCash: async () => bobExitCashToken,
       orderCreator: { name: 'Alice', wallet: aliceMatic },
       orderFiller: { name: 'Bob', wallet: bobMatic },
-      outcome: 1,
       direction: ASK_ORDER,
       expectedExitShares: {
-        orderCreator: [0, firstOrderFilledAmount - 300, 0],
-        orderFiller: [0, 300, firstOrderFilledAmount] // test wrong shares for outcome 2
+        orderCreator: [0, firstOrderFilledAmount - secondOrderAmount, 0],
+        orderFiller: [firstOrderFilledAmount, secondOrderAmount, 0]
+      },
+      expectedCashDelta: {
+        orderCreator: secondOrderAmount * secondOrderSharePrice,
+        // must use market.numTicks but in this case it is always 100 
+        // read https://augur.gitbook.io/augur/contracts/overview#creation-parameters Num Ticks (Scalar Only)
+        orderFiller: -(secondOrderAmount * (100 - secondOrderSharePrice))
       },
       order: async () => secondOrder
     })
@@ -196,7 +200,7 @@ describe('AugurPredicate: Deprecation', function() {
 
     it('should initialize augur predicate exit', async function() {
       ({ exitShareToken } = await initializeAugurPredicateExit.call(this, alice))
-      await this.augurPredicate.from.claimShareBalanceFaucet(alice.address, market.address, 1, 700)
+      await this.augurPredicate.from.claimShareBalanceFaucet(alice.address, market.address, NO_OUTCOME, 700)
       await assertTokenBalances(exitShareToken, market.rootMarket.address, alice.address, [0, 700, 0])
 
       // obtain exit id here, because it changes with each claim

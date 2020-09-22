@@ -1,18 +1,16 @@
 import { expect } from 'chai'
-import { AUGUR_FEE, MATIC_CHAIN_ID, ASK_ORDER, DEFAULT_GAS } from 'src/constants'
+import { AUGUR_FEE, MATIC_CHAIN_ID, ASK_ORDER, DEFAULT_GAS, MAX_FEE, BID_ORDER } from 'src/constants'
 import { Counterparty } from 'src/types'
 import { assertTokenBalances } from 'src/assert'
-import { createOrder, Order } from 'src/orders'
-import { BigNumber } from "ethers"
+import { Order } from 'src/orders'
+import { BigNumber, BigNumberish } from "ethers"
 import { MarketInfo } from 'src/setup'
 import { Cash } from 'typechain/augur/Cash'
 import { ShareToken } from 'typechain/augur/ShareToken'
 
 export interface ExecuteCensoredOrderOptions {
   orderAmount: number;
-  sharePrice: number;
   tradeGroupId: string;
-  outcome: number;
   direction: number;
   orderCreator: Counterparty;
   orderFiller: Counterparty;
@@ -23,19 +21,22 @@ export interface ExecuteCensoredOrderOptions {
   expectedExitShares: {
     orderCreator: number[],
     orderFiller: number[]
+  },
+  expectedCashDelta: {
+    orderCreator: BigNumberish,
+    orderFiller: BigNumberish
   }
 }
 
 export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions) {
   const {
     orderAmount,
-    sharePrice,
     orderCreator,
     orderFiller,
     tradeGroupId,
-    outcome,
     direction,
-    expectedExitShares
+    expectedExitShares,
+    expectedCashDelta
   } = options
 
   let exitCash: Cash;
@@ -43,6 +44,7 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
   let inFlightTrade: string
   let market: MarketInfo
   let fillerExitCashBalanceBeforeTrade: BigNumber
+  let creatorExitCashBalanceBeforeTrade: BigNumber
   let order: Order
 
   describe(`when ${orderFiller.name} executes censored ${direction == ASK_ORDER ? 'ask' : 'bid'} trade`, function() {
@@ -65,6 +67,7 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
       }
   
       inFlightTrade = await orderFiller.wallet.signTransaction(txObj)
+      creatorExitCashBalanceBeforeTrade = await exitCash.balanceOf(orderCreator.wallet.address)
       fillerExitCashBalanceBeforeTrade = await exitCash.balanceOf(orderFiller.wallet.address)
     })
 
@@ -79,7 +82,7 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
     it(`${orderCreator.name} should have correct exit cash balance`, async function() {
       expect(
         await exitCash.balanceOf(orderCreator.wallet.address)
-      ).to.be.gt(20000)
+      ).to.be.gte(creatorExitCashBalanceBeforeTrade.add(expectedCashDelta.orderCreator))
     })
 
     it(`${orderFiller.name} should have correct market exit shares balance outcome`, async function() {
@@ -89,7 +92,7 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
     it(`${orderFiller.name} should have correct exit cash balance`, async function() {
       expect(
         await exitCash.balanceOf(orderFiller.wallet.address)
-      ).to.be.eq(fillerExitCashBalanceBeforeTrade.sub(orderAmount * sharePrice))
+      ).to.be.gte(fillerExitCashBalanceBeforeTrade.add(expectedCashDelta.orderFiller))
     })
   })
 }

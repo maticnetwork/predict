@@ -1,12 +1,11 @@
 import { use, expect } from 'chai'
 import { solidity } from 'ethereum-waffle'
-import { toBuffer } from 'ethereumjs-util'
-import { BigNumber, ContractReceipt, utils } from 'ethers'
+import { BigNumber, ContractReceipt } from 'ethers'
 
 import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { AUGUR_FEE, MATIC_CHAIN_ID, DEFAULT_TRADE_GROUP, DEFAULT_GAS, BID_ORDER, ASK_ORDER, VALIDATORS } from 'src/constants'
+import { DEFAULT_TRADE_GROUP, BID_ORDER, ASK_ORDER, VALIDATORS, NO_OUTCOME } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
@@ -17,13 +16,13 @@ import { processExits } from 'src/exits'
 
 import { ShareToken } from 'typechain/augur/ShareToken'
 import { Cash } from 'typechain/augur/Cash'
-import { shouldExecuteTrade, TradeReturnValues } from './behaviors/shouldExecuteTrade'
+import { shouldExecuteTrade, TradeReturnValues } from '../../behaviors/shouldExecuteTrade'
 import { Context } from 'mocha'
-import { shouldExecuteCensoredTrade } from './behaviors/shouldExecuteCensoredTrade'
+import { shouldExecuteCensoredTrade } from '../../behaviors/shouldExecuteCensoredTrade'
 
 use(solidity)
 
-describe.only('AugurPredicate: Claim Share Balance', function() {
+describe.skip('AugurPredicate: Claim Cash Balance', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
@@ -33,8 +32,6 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
   const firstOrderFilledAmount = Math.min(firstOrderAmount, fillAmount)
 
   let bobExitCashBalanceBeforeExit: BigNumber
-  let aliceInitialBalance: BigNumber
-  let bobInitialBalance: BigNumber
   let market: MarketInfo
 
   const firstTradeResult: TradeReturnValues = { }
@@ -45,9 +42,6 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
   before(deployAndPrepareTrading)
   before('Prepare trading', async function() {
     market = await createMarket.call(this)
-
-    aliceInitialBalance = await this.maticCash.contract.balanceOf(aliceMatic.address)
-    bobInitialBalance = await this.maticCash.contract.balanceOf(bobMatic.address)
 
     await approveAllForCashAndShareTokens('augur-matic')
   })
@@ -70,7 +64,7 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
           amount: firstOrderAmount, 
           price: 60, 
           currentTime: market.currentTime, 
-          outcome: 1,
+          outcome: NO_OUTCOME,
           direction: BID_ORDER
         }, 
         'augur-matic', 
@@ -85,16 +79,18 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
 
   describe('Bob is trying to fill second order but has been censored', function() {
     let bobExit: ExitPayload
+    const secondOrderAmount = 300
+    const secondOrderSharePrice = 70
 
     before('Alice creates order', async function() {
       secondOrder = await createOrder.call(
         this, 
         { 
           marketAddress: market.address, 
-          amount: 300, 
-          price: 70, 
+          amount: secondOrderAmount, 
+          price: secondOrderSharePrice, 
           currentTime: market.currentTime, 
-          outcome: 1,
+          outcome: NO_OUTCOME,
           direction: ASK_ORDER
         }, 
         'augur-matic', 
@@ -124,7 +120,7 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
               }, {
                 account: alice.address,
                 market: market.address,
-                outcome: 1
+                outcome: NO_OUTCOME
               })
             })
 
@@ -133,9 +129,7 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
             })
 
             it('Alice should have correct market outcome balance', async function() {
-              expect(
-                await bobExitShareToken.balanceOfMarketOutcome(market.rootMarket.address, 1, alice.address)
-              ).to.be.equal(firstOrderFilledAmount)
+              await assertTokenBalances(bobExitShareToken, market.rootMarket.address, alice.address, [0, firstOrderFilledAmount, 0])
             })
           })
         })
@@ -171,19 +165,21 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
     })
 
     shouldExecuteCensoredTrade({
-      orderAmount: 300,
-      sharePrice: 70,
+      orderAmount: secondOrderAmount,
       tradeGroupId,
       market: async () => market,
       exitShare: async () => bobExitShareToken,
       exitCash: async () => bobExitCashToken,
       orderCreator: { name: 'Alice', wallet: aliceMatic },
       orderFiller: { name: 'Bob', wallet: bobMatic },
-      outcome: 1,
       direction: ASK_ORDER,
       expectedExitShares: {
-        orderCreator: [0, firstOrderFilledAmount - 300, 0],
-        orderFiller: [0, 300, 0]
+        orderCreator: [0, firstOrderFilledAmount - secondOrderAmount, 0],
+        orderFiller: [0, secondOrderAmount, 0]
+      },
+      expectedCashDelta: {
+        orderCreator: secondOrderAmount * secondOrderSharePrice,
+        orderFiller: -(secondOrderAmount * secondOrderSharePrice)
       },
       order: async () => secondOrder
     })
@@ -192,6 +188,7 @@ describe.only('AugurPredicate: Claim Share Balance', function() {
   describe('when Bob exits', function() {
     describe('when market is not finalized', function() {
       let beforeOIBalancePredicate: BigNumber
+
       before(async function() {
         bobExitCashBalanceBeforeExit = await bobExitCashToken.balanceOf(bob.address)
         beforeOIBalancePredicate = await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
