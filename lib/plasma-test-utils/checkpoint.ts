@@ -4,7 +4,7 @@ import { RootChainReadWrite, HeaderBlockPayload, ValidatorWallet } from './types
 import { keccak256, toBuffer, ecsign, toRpcSig, bufferToHex } from 'ethereumjs-util'
 import { IProviderAdapter } from '../plasma/adapters/IProviderAdapter'
 import { MATIC_CHAIN_ID } from 'src/constants'
-import { BigNumber, utils } from 'ethers'
+import { utils } from 'ethers'
 
 const Web3EthAbi = require('web3-eth-abi')
 

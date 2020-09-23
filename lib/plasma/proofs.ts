@@ -23,12 +23,12 @@ export async function buildCheckpointRoot(provider: IProviderAdapter, start: num
 
 export async function buildBlockProof(provider: IProviderAdapter, start: number, end: number, blockNumber: number): Promise<string> {
   const tree = await buildBlockHeaderMerkle(provider, start, end)
-  const proof = tree.getProof(serializeBlockHeader(await provider.getBlock(blockNumber)))
+  const proof = tree.getProof(serializeBlockHeader(await provider.getBlock(blockNumber, true)))
   return bufferToHex(Buffer.concat(proof))
 }
 
 export async function buildBlockHeaderMerkle(provider: IProviderAdapter, start: number, end: number, offset?: number): Promise<MerkleTree> {
-  const blocks = await provider.getBlockBatched(start, end, offset)
+  const blocks = await provider.getBlocksBatched(start, end, false, offset)
 
   return new MerkleTree(blocks.map(b => serializeBlockHeader(b)))
 }
@@ -134,7 +134,6 @@ export function getReceiptBytes(receipt: TransactionReceipt): Buffer {
     toBuffer(receipt.status ? '0x1' : '0x0'),
     toBuffer(receipt.cumulativeGasUsed),
     toBuffer(receipt.logsBloom),
-
     // encoded log array
     receipt.logs.map(l => {
       // [address, [topics array], data]

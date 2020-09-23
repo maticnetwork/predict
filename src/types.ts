@@ -39,7 +39,8 @@ export enum ContractName {
   PredicateRegistry = 'PredicateRegistry',
   CreateOrder = 'CreateOrder',
   FillOrder = 'FillOrder',
-  DisputeWindow = 'DisputeWindow'
+  DisputeWindow = 'DisputeWindow',
+  DepositManager = 'DepositManager'
 }
 
 export function toBN(value: any): BigNumber {

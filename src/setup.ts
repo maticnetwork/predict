@@ -11,7 +11,7 @@ import { getDeployed, connectedContract, getAddress } from 'src/deployedContract
 import { CheckpointHelper } from '@maticnetwork/plasma-test-utils'
 import { MaticProvider } from 'src/providers'
 import { RootchainAdapter } from './rootChainAdapter'
-import { JsonRpcAdapter } from '@maticnetwork/plasma'
+import { EthersAdapter } from '@maticnetwork/plasma'
 
 import ShareTokenArtifact from 'artifacts/predicate/ShareToken.json'
 import CashArtifact from 'artifacts/predicate/Cash.json'
@@ -58,7 +58,8 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
 
   this.rootChain = await getDeployed(ContractName.RootChain, 'plasma')
   this.withdrawManager = await connectedContract(ContractName.WithdrawManager, 'plasma')
-  this.checkpointHelper = new CheckpointHelper(new JsonRpcAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
+
+  this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
 
   this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'predicate')
   this.rootOICash = await connectedContract(ContractName.OICash, 'augur-main')

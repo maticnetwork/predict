@@ -224,6 +224,8 @@ describe('AugurPredicate: Claim Share Balance', function() {
   })
 
   describe('when Alice exits', function() {
+    let aliceExitId: BigNumber
+
     describe('when market is not finalized', function() {
       it('should start exit', async function() {
         const { exitShareToken } = await initializeAugurPredicateExit.call(this, alice)
@@ -232,6 +234,7 @@ describe('AugurPredicate: Claim Share Balance', function() {
   
         const exitId = await this.augurPredicate.contract.getExitId(alice.address)
         const exit = await this.augurPredicate.contract.lookupExit(exitId)
+        aliceExitId = exitId
   
         await expect(this.augurPredicate.from.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
@@ -252,6 +255,13 @@ describe('AugurPredicate: Claim Share Balance', function() {
         beforeCashBalance = await this.cash.contract.balanceOf(alice.address)
 
         await processExits.call(this, this.rootOICash.address)
+      })
+
+      it('exit should be finalized', async function() {
+        const exit = await this.augurPredicate.contract.lookupExit(aliceExitId)
+        expect(
+          exit.status
+        ).to.be.eq(4) // ExitStatus.Finalized
       })
 
       it('Alice must have 0 shares for all outcomes on ethereum', async function() {

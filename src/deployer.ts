@@ -18,7 +18,8 @@ import { Governance } from 'typechain/core/Governance'
 import { Registry } from 'typechain/core/Registry'
 import { TestToken } from 'typechain/core/TestToken'
 import { StakeManager } from 'typechain/core/StakeManager'
-import { AugurPredicate } from 'typechain/AugurPredicate'
+import { AugurPredicate } from 'typechain/predicate/AugurPredicate'
+import { WithdrawManager } from 'typechain/core/WithdrawManager'
 
 const OUTPUT_DIR = 'output'
 
@@ -48,19 +49,6 @@ const from = EthProvider.getSigner(0)
 
 export async function deployAugurPredicate(): Promise<PredicateRegistry> {
   const predicateRegistry:PredicateRegistry = await deployContract(from, PredicateRegistryArtifact) as PredicateRegistry
-  const rootOICash = await getDeployed(ContractName.OICash, 'augur-main') as OiCash
-  const Governance = await getDeployed(ContractName.Governance, 'plasma') as Governance
-  const maticOICash = await getDeployed(ContractName.OICash, 'augur-matic') as OiCash
-  const plasmaRegistry = await getDeployed(ContractName.Registry, 'plasma') as Registry
-
-  await Governance.connect(from).update(
-    plasmaRegistry.address,
-    plasmaRegistry.interface.encodeFunctionData('mapToken', [
-      rootOICash.address,
-      maticOICash.address,
-      false /* _isERC721 */
-    ])
-  )
 
   // write addresses to predicate addresses file
   const predicateAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, 'addresses.predicate.json')).toString())
@@ -88,6 +76,18 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
     ])
   )
 
+  const rootCashAddr = await getAddress(ContractName.Cash, 'augur-main')
+  const maticCashAddr = await getAddress(ContractName.Cash, 'augur-matic')
+
+  await Governance.connect(from).update(
+    plasmaRegistry.address,
+    plasmaRegistry.interface.encodeFunctionData('mapToken', [
+      rootCashAddr,
+      maticCashAddr,
+      false
+    ])
+  )
+
   const AugurPredicate = await getDeployed(ContractName.AugurPredicate, 'predicate') as AugurPredicate
 
   if (
@@ -111,9 +111,11 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
 
   const ERC20PredicateAddr = await getAddress(ContractName.ERC20Predicate, 'plasma')
   const AugurAddr = await getAddress(ContractName.Augur, 'augur-main')
+  const DepositManagerAddr = await getAddress(ContractName.DepositManager, 'plasma')
   await AugurPredicate.connect(from).initializeForMatic(
     predicateRegistry.address,
     WithdrawManagerProxyAddr,
+    DepositManagerAddr,
     ERC20PredicateAddr,
     rootOICash.address,
     maticOICash.address,
@@ -136,7 +138,7 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
 
   await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic')),
   await predicateRegistry.setRootZeroXTrade(ZeroXTrade.address),
-  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true /* isDefaultExchange */),
+  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true),
   await predicateRegistry.setMaticCash(await getAddress(ContractName.Cash, 'augur-matic')),
   await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
 }

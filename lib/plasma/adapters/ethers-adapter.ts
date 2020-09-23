@@ -4,7 +4,7 @@ import { SerializableTransaction, Block, TransactionReceipt } from '../types'
 // eslint-disable-next-line
 const bluebird = require('bluebird')
 
-export class JsonRpcAdapter implements IProviderAdapter {
+export class EthersAdapter implements IProviderAdapter {
   private provider: providers.JsonRpcProvider
 
   constructor(provider: providers.JsonRpcProvider) {
@@ -41,24 +41,24 @@ export class JsonRpcAdapter implements IProviderAdapter {
     return this.buildBlockFromRpcData(block)
   }
 
-  async getBlock(number: number, offset?: number): Promise<Block> {
+  async getBlock(number: number, includeTxObject: boolean = true, offset?: number): Promise<Block> {
     let _number = number
     if (offset) {
       _number += offset // important in case if used with ganache
     }
 
-    const block:any = await this.provider.send('eth_getBlockByNumber', [_number, true])
+    const block:any = await this.provider.send('eth_getBlockByNumber', [_number, includeTxObject])
     block.number = number
     return this.buildBlockFromRpcData(block)
   }
 
-  async getBlockBatched(start: number, end: number, offset?: number): Promise<Block[]> {
+  async getBlocksBatched(start: number, end: number, includeTxObject: boolean = true, offset?: number): Promise<Block[]> {
     const blocks = new Array(end - start + 1)
     await bluebird.map(
       blocks,
       // eslint-disable-next-line
       async (_: any, i: number) => {
-        const block = await this.getBlock(i + start, offset)
+        const block = await this.getBlock(i + start, includeTxObject, offset)
         blocks[i] = block
       },
       { concurrency: 10 }
