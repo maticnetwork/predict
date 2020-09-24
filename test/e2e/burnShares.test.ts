@@ -10,7 +10,7 @@ import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
 import { createMarket } from 'src/setup'
-import { indexOfEvent } from 'src/events'
+import { findEvents, indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'
 import { processExits } from 'src/exits'
 
@@ -80,12 +80,19 @@ describe.only('Exit with burnt shares', function() {
     describe('partial burn', function() {
       let exitPayload: ExitPayload
       let cashBalanceBeforeExit: BigNumber
-      let burnAmount: BigNumber
+      let exitAmount: BigNumber
+      let amountExpectedOnMatic: BigNumber
       
       before('Burn cash', async function() {
         cashBalanceBeforeExit = await this.cash.contract.balanceOf(alice.address)
+
         const currentCashBalance = await this.maticCash.contract.balanceOf(alice.address)
-        burnAmount = currentCashBalance.div(4)
+        const burnAmount = currentCashBalance.div(4)
+
+        amountExpectedOnMatic = currentCashBalance.sub(burnAmount)
+
+        exitAmount = burnAmount.sub(burnAmount.div(100)) // 1% fee
+        exitAmount = cashBalanceBeforeExit.add(exitAmount)
 
         const tx = await this.maticCash.from.joinBurn(alice.address, burnAmount)
         const receipt = await tx.wait(0)
@@ -99,10 +106,8 @@ describe.only('Exit with burnt shares', function() {
       })
 
       it('must start exit', async function() {
-        await expect(
-          this.augurPredicate.from.startExitWithBurntTokens(buildReferenceTxPayload(exitPayload))
-        )
-        .to.emit(this.withdrawManager.contract, 'ExitStarted')
+        const promise = this.augurPredicate.from.startExitWithBurntTokens(buildReferenceTxPayload(exitPayload))
+        await expect(promise).to.emit(this.withdrawManager.contract, 'ExitStarted')
       })
 
       it('must process exits', async function() {
@@ -110,13 +115,15 @@ describe.only('Exit with burnt shares', function() {
       })
 
       it('cash balance must be reflected on ethereum', async function() {
-        console.log('cashBalanceBeforeExit', cashBalanceBeforeExit)
-        console.log('burnAmount', burnAmount)
-        console.log('this.cash.contract.balanceOf(alice.address)', await this.cash.contract.balanceOf(alice.address))
-        console.log('cashBalanceBeforeExit.add(burnAmount)', cashBalanceBeforeExit.add(burnAmount))
         expect(
           await this.cash.contract.balanceOf(alice.address)
-        ).to.be.eq(cashBalanceBeforeExit.add(burnAmount))
+        ).to.be.eq(exitAmount)
+      })
+
+      it('must have correct balance on matic', async function() {
+        expect(
+          await this.maticCash.contract.balanceOf(alice.address)
+        ).to.be.eq(amountExpectedOnMatic)
       })
     })
   })

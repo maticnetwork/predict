@@ -29,7 +29,6 @@ export async function buildBlockProof(provider: IProviderAdapter, start: number,
 
 export async function buildBlockHeaderMerkle(provider: IProviderAdapter, start: number, end: number, offset?: number): Promise<MerkleTree> {
   const blocks = await provider.getBlocksBatched(start, end, false, offset)
-
   return new MerkleTree(blocks.map(b => serializeBlockHeader(b)))
 }
 

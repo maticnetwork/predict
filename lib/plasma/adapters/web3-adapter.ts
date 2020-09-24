@@ -30,8 +30,11 @@ export class Web3Adapter implements IProviderAdapter {
     }
   }
 
-  private buildBlockFromRpcData(blockData: any): Block {
-    blockData.transactions = blockData.transactions.map((t:any) => this.transformRpcTx(t))
+  private buildBlockFromRpcData(blockData: any, transformTx: boolean): Block {
+    if (transformTx) {
+      blockData.transactions = blockData.transactions.map((t:any) => this.transformRpcTx(t))
+    }
+    
     blockData.number = BigNumber.from(blockData.number).toNumber()
     blockData.timestamp = BigNumber.from(blockData.timestamp).toNumber()
     return blockData
@@ -39,7 +42,7 @@ export class Web3Adapter implements IProviderAdapter {
 
   async getBlockByHash(hash: string): Promise<Block> {
     const block:any = await this.provider.eth.getBlock(hash, true)
-    return this.buildBlockFromRpcData(block)
+    return this.buildBlockFromRpcData(block, true)
   }
 
   async getBlock(number: number, includeTxObject: boolean, offset?: number): Promise<Block> {
@@ -50,7 +53,7 @@ export class Web3Adapter implements IProviderAdapter {
 
     const block:any = await this.provider.eth.getBlock(_number, includeTxObject)
     block.number = number
-    return this.buildBlockFromRpcData(block)
+    return this.buildBlockFromRpcData(block, includeTxObject)
   }
 
   async getBlocksBatched(start: number, end: number, includeTxObject: boolean, offset?: number): Promise<Block[]> {

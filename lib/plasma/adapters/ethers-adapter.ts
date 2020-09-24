@@ -29,8 +29,11 @@ export class EthersAdapter implements IProviderAdapter {
     }
   }
 
-  private buildBlockFromRpcData(blockData: any): Block {
-    blockData.transactions = blockData.transactions.map((t:any) => this.transformRpcTx(t))
+  private buildBlockFromRpcData(blockData: any, transformTxs: boolean): Block {
+    if (transformTxs) {
+      blockData.transactions = blockData.transactions.map((t:any) => this.transformRpcTx(t))
+    }
+    
     blockData.number = BigNumber.from(blockData.number).toNumber()
     blockData.timestamp = BigNumber.from(blockData.timestamp).toNumber()
     return blockData
@@ -38,7 +41,7 @@ export class EthersAdapter implements IProviderAdapter {
 
   async getBlockByHash(hash: string): Promise<Block> {
     const block:any = await this.provider.send('eth_getBlockByHash', [hash, true])
-    return this.buildBlockFromRpcData(block)
+    return this.buildBlockFromRpcData(block, true)
   }
 
   async getBlock(number: number, includeTxObject: boolean = true, offset?: number): Promise<Block> {
@@ -49,7 +52,7 @@ export class EthersAdapter implements IProviderAdapter {
 
     const block:any = await this.provider.send('eth_getBlockByNumber', [_number, includeTxObject])
     block.number = number
-    return this.buildBlockFromRpcData(block)
+    return this.buildBlockFromRpcData(block, includeTxObject)
   }
 
   async getBlocksBatched(start: number, end: number, includeTxObject: boolean = true, offset?: number): Promise<Block[]> {
