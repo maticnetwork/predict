@@ -191,7 +191,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
 
       before(async function() {
         bobExitCashBalanceBeforeExit = await bobExitCashToken.balanceOf(bob.address)
-        beforeOIBalancePredicate = await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+        beforeOIBalancePredicate = await this.oiCash.contract.balanceOf(this.augurPredicate.address)
       })
 
       it('should start exit', async function() {
@@ -201,7 +201,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
   
         await expect(this.augurPredicate.other.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
-          .withArgs(bob.address, exit.exitPriority.shl(1), this.rootOICash.address, exitId, false)
+          .withArgs(bob.address, exit.exitPriority.shl(1), this.oiCash.address, exitId, false)
       })
 
       it('should have 0 cash on ethereum', async function() {
@@ -211,7 +211,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
       })
   
       it('should exit', async function() {
-        await processExits.call(this, this.rootOICash.address)
+        await processExits.call(this, this.oiCash.address)
       })
 
       it('Bob should have correct market outcome balances', async function() {
@@ -230,7 +230,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
 
       it('augur predicate should have correct OICash balance on ethereum', async function() {
         expect(
-          await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+          await this.oiCash.contract.balanceOf(this.augurPredicate.address)
         ).to.be.eq(beforeOIBalancePredicate.sub(bobExitCashBalanceBeforeExit).sub(300 * 100))
       })
     })

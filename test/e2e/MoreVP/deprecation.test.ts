@@ -214,7 +214,7 @@ describe('AugurPredicate: Deprecation', function() {
 
       await expect(this.augurPredicate.from.startExit())
         .to.emit(this.withdrawManager.contract, 'ExitStarted')
-        .withArgs(alice.address, aliceExitId, this.rootOICash.address, exitId, false)
+        .withArgs(alice.address, aliceExitId, this.oiCash.address, exitId, false)
     })
   })
 
@@ -226,7 +226,7 @@ describe('AugurPredicate: Deprecation', function() {
 
       await expect(this.augurPredicate.other.startExit())
         .to.emit(this.withdrawManager.contract, 'ExitStarted')
-        .withArgs(bob.address, bobExitId, this.rootOICash.address, exitId, false)
+        .withArgs(bob.address, bobExitId, this.oiCash.address, exitId, false)
     })
   })
 

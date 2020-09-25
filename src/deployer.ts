@@ -11,8 +11,8 @@ import { EthProvider, getProvider } from 'src/providers'
 import { EthWallets } from 'src/wallets'
 import { utils } from 'ethers'
 
-import PredicateRegistryArtifact from 'artifacts/PredicateRegistry.json'
-import { PredicateRegistry } from 'typechain/PredicateRegistry'
+import PredicateRegistryArtifact from 'artifacts/predicate/PredicateRegistry.json'
+import { PredicateRegistry } from 'typechain/predicate/PredicateRegistry'
 import { OiCash } from 'typechain/augur/OiCash'
 import { Governance } from 'typechain/core/Governance'
 import { Registry } from 'typechain/core/Registry'
@@ -45,10 +45,10 @@ export async function deployAll(): Promise<void> {
   await prepareRootChainForTesting()
 }
 
-const from = EthProvider.getSigner(0)
+const owner = EthProvider.getSigner(0)
 
 export async function deployAugurPredicate(): Promise<PredicateRegistry> {
-  const predicateRegistry:PredicateRegistry = await deployContract(from, PredicateRegistryArtifact) as PredicateRegistry
+  const predicateRegistry:PredicateRegistry = await deployContract(owner, PredicateRegistryArtifact) as PredicateRegistry
 
   // write addresses to predicate addresses file
   const predicateAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, 'addresses.predicate.json')).toString())
@@ -59,15 +59,17 @@ export async function deployAugurPredicate(): Promise<PredicateRegistry> {
 }
 
 export async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Promise<void> {
-  predicateRegistry = predicateRegistry.connect(from)
+  predicateRegistry = predicateRegistry.connect(owner)
 
   const rootOICash = await getDeployed(ContractName.OICash, 'augur-main') as OiCash
   const maticOICash = await getDeployed(ContractName.OICash, 'augur-matic') as OiCash
   const Governance = await getDeployed(ContractName.Governance, 'plasma') as Governance
   const plasmaRegistry = await getDeployed(ContractName.Registry, 'plasma') as Registry
+  const ZeroXTrade = await getDeployed(ContractName.ZeroXTrade, 'predicate')
+  const ZeroXExchange = await getDeployed(ContractName.ZeroXExchange, 'predicate')
 
   // Matic initializations
-  await Governance.connect(from).update(
+  await Governance.connect(owner).update(
     plasmaRegistry.address,
     plasmaRegistry.interface.encodeFunctionData('mapToken', [
       rootOICash.address,
@@ -76,10 +78,17 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
     ])
   )
 
+  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic')),
+  await predicateRegistry.setRootZeroXTrade(ZeroXTrade.address),
+  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true),
+  await predicateRegistry.setCash(await getAddress(ContractName.Cash, 'augur-matic')),
+  await predicateRegistry.setOICash(await getAddress(ContractName.OICash, 'augur-matic')),
+  await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
+
   const rootCashAddr = await getAddress(ContractName.Cash, 'augur-main')
   const maticCashAddr = await getAddress(ContractName.Cash, 'augur-matic')
 
-  await Governance.connect(from).update(
+  await Governance.connect(owner).update(
     plasmaRegistry.address,
     plasmaRegistry.interface.encodeFunctionData('mapToken', [
       rootCashAddr,
@@ -93,7 +102,7 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
   if (
     await plasmaRegistry.predicates(AugurPredicate.address) === 0
   ) {
-    await Governance.connect(from).update(
+    await Governance.connect(owner).update(
       plasmaRegistry.address,
       plasmaRegistry.interface.encodeFunctionData('addPredicate', [AugurPredicate.address, 3])
     )
@@ -104,43 +113,34 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
   const ShareTokenPredicate = await getDeployed(ContractName.ShareTokenPredicate, 'predicate')
   const WithdrawManagerProxyAddr = await getAddress(ContractName.WithdrawManager, 'plasma')
   // Predicate initializations
-  await ShareTokenPredicate.connect(from).initialize(
+  await ShareTokenPredicate.connect(owner).initialize(
     predicateRegistry.address,
     WithdrawManagerProxyAddr
   )
 
   const ERC20PredicateAddr = await getAddress(ContractName.ERC20Predicate, 'plasma')
   const AugurAddr = await getAddress(ContractName.Augur, 'augur-main')
-  const DepositManagerAddr = await getAddress(ContractName.DepositManager, 'plasma')
-  await AugurPredicate.connect(from).initializeForMatic(
+  const RegistryAddr = await getAddress(ContractName.Registry, 'plasma')
+  await AugurPredicate.connect(owner).initializeForMatic(
     predicateRegistry.address,
     WithdrawManagerProxyAddr,
-    DepositManagerAddr,
     ERC20PredicateAddr,
     rootOICash.address,
-    maticOICash.address,
     AugurAddr,
-    ShareTokenPredicate.address
+    ShareTokenPredicate.address,
+    RegistryAddr
   )
 
   assert.equal(await AugurPredicate.predicateRegistry(), predicateRegistry.address)
   assert.equal(await AugurPredicate.withdrawManager(), WithdrawManagerProxyAddr)
 
-  const ZeroXTrade = await getDeployed(ContractName.ZeroXTrade, 'predicate')
-  await ZeroXTrade.connect(from).setRegistry(predicateRegistry.address)
+  await ZeroXTrade.connect(owner).setRegistry(predicateRegistry.address)
 
   assert.equal(await ZeroXTrade.registry(), predicateRegistry.address)
 
-  const ZeroXExchange = await getDeployed(ContractName.ZeroXExchange, 'predicate')
-  await ZeroXExchange.connect(from).setRegistry(predicateRegistry.address)
+  await ZeroXExchange.connect(owner).setRegistry(predicateRegistry.address)
 
   assert.equal(await ZeroXExchange.registry(), predicateRegistry.address)
-
-  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic')),
-  await predicateRegistry.setRootZeroXTrade(ZeroXTrade.address),
-  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true),
-  await predicateRegistry.setMaticCash(await getAddress(ContractName.Cash, 'augur-matic')),
-  await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
 }
 
 async function prepareRootChainForTesting() {
@@ -148,7 +148,7 @@ async function prepareRootChainForTesting() {
   const mintAmount = utils.parseEther('2000')
   const defaultHeimdallFee = utils.parseEther('2')
 
-  const stakeToken = await getDeployed(ContractName.TestToken, 'plasma', from) as TestToken
+  const stakeToken = await getDeployed(ContractName.TestToken, 'plasma', owner) as TestToken
   const stakeManager = await getDeployed(ContractName.StakeManager, 'plasma') as StakeManager
 
   for (const wallet of EthWallets) {

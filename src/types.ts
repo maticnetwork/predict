@@ -2,6 +2,7 @@ import { BigNumber, Wallet } from 'ethers'
 
 import { Cash } from 'typechain/augur/Cash'
 import { OiCash } from 'typechain/augur/OiCash'
+import { OiCash as MaticOiCash } from 'typechain/predicate/OiCash'
 import { AugurPredicate } from 'typechain/predicate/AugurPredicate'
 import { Universe } from 'typechain/augur/Universe'
 import { Augur } from 'typechain/augur/Augur'
@@ -30,7 +31,7 @@ export enum ContractName {
   ZeroXExchange = 'ZeroXExchange',
   Cash = 'Cash',
   ShareToken = 'ShareToken',
-  TestToken = 'TestToken',
+TestToken = 'TestToken',
   StakeManager = 'StakeManager',
   RootChain = 'RootChain',
   TestNetReputationToken = 'TestNetReputationToken',
@@ -40,7 +41,10 @@ export enum ContractName {
   CreateOrder = 'CreateOrder',
   FillOrder = 'FillOrder',
   DisputeWindow = 'DisputeWindow',
-  DepositManager = 'DepositManager'
+  DepositManager = 'DepositManager',
+  StateSender = 'StateSender',
+  DaiVat = 'TestNetDaiVat',
+  DaiJoin = 'TestNetDaiJoin'
 }
 
 export function toBN(value: any): BigNumber {
@@ -50,6 +54,7 @@ export function toBN(value: any): BigNumber {
 export type ConnectedCash = ConnectedContract<Cash>
 export type ConnectedShareToken = ConnectedContract<ShareToken>
 export type ConnectedOiCash = ConnectedContract<OiCash>
+export type ConnectedMaticOiCash = ConnectedContract<MaticOiCash>
 export type ConnectedZeroXTrade = ConnectedContract<ZeroXTrade>
 export type ConnectedAugurPredicate = ConnectedContract<AugurPredicate>
 export type ConnectedUniverse = ConnectedContract<Universe>

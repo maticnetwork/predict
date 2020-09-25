@@ -16,6 +16,8 @@ import { processExits } from 'src/exits'
 import { shouldExecuteTrade, TradeReturnValues } from '../behaviors/shouldExecuteTrade'
 import { Context } from 'mocha'
 
+const Web3EthAbi = require('web3-eth-abi')
+
 use(solidity)
 
 function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: string) {
@@ -24,15 +26,16 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
       let exitPayload: ExitPayload
       let cashBalanceBeforeExit: BigNumber
       let exitAmount: BigNumber
+      let burnAmount: BigNumber
       let amountExpectedOnMatic: BigNumber
+      let maticCashBalanceBeforeExit: BigNumber
       
       before('Burn cash', async function() {
         cashBalanceBeforeExit = await this.cash.contract.balanceOf(wallet.address)
+        maticCashBalanceBeforeExit = await this.maticCash.contract.balanceOf(wallet.address)
 
-        const currentCashBalance = await this.maticCash.contract.balanceOf(wallet.address)
-        const burnAmount = currentCashBalance.div(4)
-
-        amountExpectedOnMatic = currentCashBalance.sub(burnAmount)
+        burnAmount = maticCashBalanceBeforeExit.div(4)
+        amountExpectedOnMatic = maticCashBalanceBeforeExit.sub(burnAmount)
         exitAmount = cashBalanceBeforeExit.add(burnAmount)
 
         const tx = await this.maticCash.contract.connect(maticWallet).joinBurn(wallet.address, burnAmount)
@@ -62,10 +65,23 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
         ).to.be.lte(exitAmount)
       })
 
-      it('must have correct balance on matic', async function() {
+      it('must have correct cash balance on matic', async function() {
         expect(
           await this.maticCash.contract.balanceOf(wallet.address)
         ).to.be.eq(amountExpectedOnMatic)
+      })
+
+      it('must have correct OICash balance on matic', async function() {
+        const stateParams = Web3EthAbi.encodeParameters([
+          'address', 'uint256', 'bool'
+        ], [
+          wallet.address, burnAmount.toString(), false /* mint */
+        ])
+        await this.maticCash.from.onStateReceive(0, stateParams)
+
+        expect(
+          await this.maticCash.contract.balanceOf(wallet.address)
+        ).to.be.eq(maticCashBalanceBeforeExit.sub(burnAmount))
       })
     })
   })

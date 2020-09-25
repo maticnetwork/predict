@@ -5,6 +5,7 @@ import { RootChain } from 'typechain/core/RootChain'
 import { 
   ConnectedAugurPredicate, 
   ConnectedOiCash, 
+  ConnectedMaticOiCash,
   ConnectedCash, 
   ConnectedAugur, 
   ConnectedTime, 
@@ -25,7 +26,8 @@ declare module 'mocha' {
     augur: ConnectedAugur;
     maticAugur: ConnectedAugur;
     augurPredicate: ConnectedAugurPredicate;
-    rootOICash: ConnectedOiCash;
+    oiCash: ConnectedOiCash;
+    maticOICash: ConnectedMaticOiCash;
     maticZeroXExchange: ConnectedZeroXExchange;
     maticZeroXTrade: ConnectedZeroXTrade;
     maticShareToken: ConnectedShareToken;

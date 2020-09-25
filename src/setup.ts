@@ -1,7 +1,7 @@
 import { deployMarket } from './augur'
 import { Context } from 'mocha'
 import { Market } from 'typechain/augur/Market'
-import { Signer } from 'ethers'
+import { BigNumber, Signer } from 'ethers'
 import { deployContract } from 'ethereum-waffle'
 import { ContractType, ContractName } from 'src/types'
 import { MAX_AMOUNT } from 'src/constants'
@@ -17,7 +17,11 @@ import ShareTokenArtifact from 'artifacts/predicate/ShareToken.json'
 import CashArtifact from 'artifacts/predicate/Cash.json'
 
 import { Cash } from 'typechain/augur/Cash'
+import { StateSender } from 'typechain/core/StateSender'
 import { ShareToken } from 'typechain/augur/ShareToken'
+import { TestNetDaiVat } from 'typechain/augur/TestNetDaiVat'
+
+const Web3EthAbi = require('web3-eth-abi')
 
 export interface MarketInfo {
   numTicks: number;
@@ -62,9 +66,17 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
 
   this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'predicate')
-  this.rootOICash = await connectedContract(ContractName.OICash, 'augur-main')
+  this.oiCash = await connectedContract(ContractName.OICash, 'augur-main')
+  this.maticOICash = await connectedContract(ContractName.OICash, 'augur-matic')
+
   this.cash = await connectedContract(ContractName.Cash, 'augur-main')
   this.maticCash = await connectedContract(ContractName.Cash, 'augur-matic')
+
+  await this.maticCash.from.changeStateSyncerAddress(from.address)
+  await this.augurPredicate.from.updateChildChainAndStateSender()
+
+  const stateSender = await getDeployed(ContractName.StateSender, 'plasma') as StateSender
+  await stateSender.connect(from).register(this.augurPredicate.address, this.maticCash.address)
 
   this.time = await connectedContract(ContractName.Time, 'augur-main')
   this.maticTime = await connectedContract(ContractName.Time, 'augur-matic')
@@ -85,6 +97,9 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await this.maticCash.from.joinBurn(this.from, await this.maticCash.contract.balanceOf(this.from))
   await this.maticCash.other.joinBurn(this.otherFrom, await this.maticCash.contract.balanceOf(this.otherFrom))
 
+  // await this.maticCash.from.faucet(defaultCashAmount)
+  // await this.maticCash.other.faucet(defaultCashAmount)
+
   await this.cash.from.faucet(defaultCashAmount)
   await this.cash.other.faucet(defaultCashAmount)
   await this.cash.from.approve(this.augurPredicate.contract.address, defaultCashAmount)
@@ -93,8 +108,24 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await this.augurPredicate.from.deposit(defaultCashAmount)
   await this.augurPredicate.other.deposit(defaultCashAmount)
 
-  await this.maticCash.from.faucet(defaultCashAmount)
-  await this.maticCash.other.faucet(defaultCashAmount)
+  await this.maticCash.from.onStateReceive(0, Web3EthAbi.encodeParameters([
+    'address', 'uint256', 'bool'
+  ], [
+    from.address, defaultCashAmount, true /* mint */
+  ]))
+
+  await this.maticCash.from.onStateReceive(0, Web3EthAbi.encodeParameters([
+    'address', 'uint256', 'bool'
+  ], [
+    otherFrom.address, defaultCashAmount, true /* mint */
+  ]))
+
+  const daiJoinAmount = BigNumber.from(10).pow(27).mul(defaultCashAmount)
+  const daiJoinAddr = await getAddress(ContractName.DaiJoin, 'augur-matic')
+  
+  const daiVat = await connectedContract<TestNetDaiVat>(ContractName.DaiVat, 'augur-matic')
+  await daiVat.from.faucet(daiJoinAddr, daiJoinAmount)
+  await daiVat.other.faucet(daiJoinAddr, daiJoinAmount)
 }
 
 

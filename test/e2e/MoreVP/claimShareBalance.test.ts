@@ -198,13 +198,13 @@ describe('AugurPredicate: Claim Share Balance', function() {
   
         await expect(this.augurPredicate.other.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
-          .withArgs(bob.address, exit.exitPriority.shl(1), this.rootOICash.address, exitId, false)
+          .withArgs(bob.address, exit.exitPriority.shl(1), this.oiCash.address, exitId, false)
       })
   
       it('should exit', async function() {
-        beforeOIBalancePredicate = await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+        beforeOIBalancePredicate = await this.oiCash.contract.balanceOf(this.augurPredicate.address)
     
-        await processExits.call(this, this.rootOICash.address)
+        await processExits.call(this, this.oiCash.address)
       })
 
       it('should have correct shares on ethereum',async function() {
@@ -217,7 +217,7 @@ describe('AugurPredicate: Claim Share Balance', function() {
 
       it('augur predicate should have correct OICash balance on ethereum', async function() {
         expect(
-          await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+          await this.oiCash.contract.balanceOf(this.augurPredicate.address)
         ).to.be.eq(beforeOIBalancePredicate.sub(bobExitCashBalanceBeforeExit).sub(700 * 100)) // predicate bought 700 complete sets
       })
     })
@@ -238,7 +238,7 @@ describe('AugurPredicate: Claim Share Balance', function() {
   
         await expect(this.augurPredicate.from.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
-          .withArgs(alice.address, exit.exitPriority.shl(1), this.rootOICash.address, exitId, false)
+          .withArgs(alice.address, exit.exitPriority.shl(1), this.oiCash.address, exitId, false)
       })
     })
 
@@ -251,10 +251,10 @@ describe('AugurPredicate: Claim Share Balance', function() {
         // Predicate will redeem the winning shares, have it deposited directly to OICash and then withdraw that OICash
         await finalizeMarket.call(this, market.rootMarket.connect(alice))
 
-        beforeOIBalancePredicate = await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+        beforeOIBalancePredicate = await this.oiCash.contract.balanceOf(this.augurPredicate.address)
         beforeCashBalance = await this.cash.contract.balanceOf(alice.address)
 
-        await processExits.call(this, this.rootOICash.address)
+        await processExits.call(this, this.oiCash.address)
       })
 
       it('exit should be finalized', async function() {
@@ -280,7 +280,7 @@ describe('AugurPredicate: Claim Share Balance', function() {
 
       it('augur predicate ethereum cash balance must stay unchanged', async function() {
         expect(
-          await this.rootOICash.contract.balanceOf(this.augurPredicate.address)
+          await this.oiCash.contract.balanceOf(this.augurPredicate.address)
         ).to.be.eq(beforeOIBalancePredicate)
       })
     })
