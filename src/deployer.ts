@@ -7,12 +7,13 @@ import { getDeployed, getAddress } from 'src/deployedContracts'
 import { ContractName } from 'src/types'
 import { execShellCommand } from 'src/execShellCommand'
 import { deployContract } from 'ethereum-waffle'
-import { EthProvider, getProvider } from 'src/providers'
+import { EthProvider } from 'src/providers'
 import { EthWallets } from 'src/wallets'
 import { utils } from 'ethers'
 
 import PredicateRegistryArtifact from 'artifacts/predicate/PredicateRegistry.json'
-import ExitFactoryArtifact from 'artifacts/predicate/ExitFactory.json'
+import ExitCashFactoryArtifact from 'artifacts/predicate/ExitCashFactory.json'
+import ExitShareTokenFactory from 'artifacts/predicate/ExitShareTokenFactory.json'
 import { PredicateRegistry } from 'typechain/predicate/PredicateRegistry'
 import { OiCash } from 'typechain/augur/OiCash'
 import { Governance } from 'typechain/core/Governance'
@@ -121,17 +122,19 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
   const ERC20PredicateAddr = await getAddress(ContractName.ERC20Predicate, 'plasma')
   const AugurAddr = await getAddress(ContractName.Augur, 'augur-main')
   const RegistryAddr = await getAddress(ContractName.Registry, 'plasma')
-  const exitFactory = await deployContract(owner, ExitFactoryArtifact)
+  const exitCashFactory = await deployContract(owner, ExitCashFactoryArtifact)
+  const exitShareTokenFactory = await deployContract(owner, ExitCashFactoryArtifact)
 
   await AugurPredicate.connect(owner).initializeForMatic(
-    exitFactory.address,
     predicateRegistry.address,
     WithdrawManagerProxyAddr,
     ERC20PredicateAddr,
     rootOICash.address,
     AugurAddr,
     ShareTokenPredicate.address,
-    RegistryAddr
+    RegistryAddr,
+    exitShareTokenFactory.address,
+    exitCashFactory.address
   )
 
   assert.equal(await AugurPredicate.predicateRegistry(), predicateRegistry.address)
