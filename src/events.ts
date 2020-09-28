@@ -1,7 +1,7 @@
 import { getAbi } from 'src/deployedContracts'
 import { LogEntry } from '@maticnetwork/plasma'
 import { ContractName, ContractType } from 'src/types'
-import { BigNumber, utils } from 'ethers';
+import { BigNumber, utils } from 'ethers'
 
 interface IndexOfEventOptions {
   contractName: ContractName;
@@ -36,26 +36,26 @@ export function indexOfEvent(options: IndexOfEventOptions, evtArgs?: { [key: str
     let event
     try {
       event = contract.parseLog(log)
-      if (event.name == options.eventName) {
+      if (event.name === options.eventName) {
         let checksPassed = true
-        
+
         if (evtArgs) {
           for (const argKey in evtArgs) {
             try {
               const logValue = event.args[argKey]
-  
+
               if (logValue === undefined) {
                 checksPassed = false
               }
-  
+
               const value = evtArgs[argKey]
-  
+
               if (BigNumber.isBigNumber(value) && !BigNumber.from(logValue).eq(value)) {
                 checksPassed = false
-              } else if (value != logValue) {
+              } else if (value !== logValue) {
                 checksPassed = false
               }
-  
+
               if (!checksPassed) {
                 break
               }
@@ -64,12 +64,11 @@ export function indexOfEvent(options: IndexOfEventOptions, evtArgs?: { [key: str
             }
           }
         }
-        
+
         if (checksPassed) {
           return log.logIndex!
         }
       }
-
     } catch (_) {
       continue
     }

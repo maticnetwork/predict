@@ -47,7 +47,7 @@ export interface Order {
   affiliateAddress: string
 }
 
-export async function createOrder(this: Context, request: OrderRequest, contractType: ContractType, from: Wallet, duration: number = 10000): Promise<Order> {
+export async function createOrder(this: Context, request: OrderRequest, contractType: ContractType, from: Wallet, duration = 10000): Promise<Order> {
   // Zero X trading happens through the ZeroXTrade contract
   const { price, outcome, direction, currentTime, amount, marketAddress } = request
   // Get the on chain timestamp. We'll use this to calculate the order expiration and as the salt for the order
@@ -57,14 +57,14 @@ export async function createOrder(this: Context, request: OrderRequest, contract
   const zeroXExchange = await getDeployed<ZeroXExchange>(ContractName.ZeroXExchange, contractType)
 
   const { _zeroXOrder, _orderHash } = await zeroXTrade.connect(from).callStatic.createZeroXOrder(
-    direction, 
-    amount, 
-    price, 
-    marketAddress, 
-    outcome, 
-    constants.AddressZero, 
-    expirationTime, 
-    zeroXExchange.address, 
+    direction,
+    amount,
+    price,
+    marketAddress,
+    outcome,
+    constants.AddressZero,
+    expirationTime,
+    zeroXExchange.address,
     currentTime
   )
 
@@ -72,7 +72,7 @@ export async function createOrder(this: Context, request: OrderRequest, contract
   const signature = bufferToHex(
     Buffer.concat(
       [
-        toBuffer(await sign0x(toBuffer(_orderHash), from)), 
+        toBuffer(await sign0x(toBuffer(_orderHash), from)),
         toBuffer(3)
       ]
     )

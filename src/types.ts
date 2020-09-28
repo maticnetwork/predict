@@ -64,7 +64,6 @@ export type ConnectedPredicateRegistry = ConnectedContract<PredicateRegistry>
 export type ConnectedZeroXExchange = ConnectedContract<ZeroXExchange>
 export type ConnectedWithdrawManager = ConnectedContract<WithdrawManager>
 
-
 export interface Counterparty {
   name: string;
   wallet: Wallet;

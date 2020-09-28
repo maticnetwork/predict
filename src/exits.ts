@@ -4,13 +4,14 @@ import { ContractName } from 'src/types'
 import { Market } from 'typechain/augur/Market'
 import { DisputeWindow } from 'typechain/augur/DisputeWindow'
 import { createContract } from 'src/deployedContracts'
+import { ContractTransaction } from 'ethers'
 
-export async function processExits(this: Context, tokenAddress: string) {
+export async function processExits(this: Context, tokenAddress: string) :Promise<ContractTransaction> {
   await increaseBlockTime.call(this, 14 * 86400)
   return await this.withdrawManager.from.processExits(tokenAddress)
 }
 
-export async function finalizeMarket(this: Context, market: Market) {
+export async function finalizeMarket(this: Context, market: Market) :Promise<void> {
   const endTime = await market.getEndTime()
   await this.time.from.setTimestamp(endTime.add(1))
   await market.doInitialReport([0, 100, 0], '', 0)

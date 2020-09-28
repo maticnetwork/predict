@@ -9,7 +9,7 @@ async function increaseChainTime(time: ConnectedTime, provider: providers.JsonRp
   await provider.send('evm_increaseTime', [seconds])
 }
 
-export async function increaseBlockTime(this: Context, seconds: number) {
+export async function increaseBlockTime(this: Context, seconds: number): Promise<void> {
   await Promise.all([
     increaseChainTime(this.time, EthProvider, seconds),
     increaseChainTime(this.maticTime, MaticProvider, seconds)

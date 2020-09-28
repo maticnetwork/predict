@@ -1,6 +1,4 @@
-import { BytesLike, Signer } from "ethers";
-
-import { utils } from 'ethers'
+import { BytesLike, Signer, utils } from 'ethers'
 
 export function parseFullSets(sets: number): number {
   return sets * 100

@@ -12,6 +12,7 @@ import { EthWallets } from 'src/wallets'
 import { utils } from 'ethers'
 
 import PredicateRegistryArtifact from 'artifacts/predicate/PredicateRegistry.json'
+import ExitFactoryArtifact from 'artifacts/predicate/ExitFactory.json'
 import { PredicateRegistry } from 'typechain/predicate/PredicateRegistry'
 import { OiCash } from 'typechain/augur/OiCash'
 import { Governance } from 'typechain/core/Governance'
@@ -19,7 +20,6 @@ import { Registry } from 'typechain/core/Registry'
 import { TestToken } from 'typechain/core/TestToken'
 import { StakeManager } from 'typechain/core/StakeManager'
 import { AugurPredicate } from 'typechain/predicate/AugurPredicate'
-import { WithdrawManager } from 'typechain/core/WithdrawManager'
 
 const OUTPUT_DIR = 'output'
 
@@ -78,11 +78,11 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
     ])
   )
 
-  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic')),
-  await predicateRegistry.setRootZeroXTrade(ZeroXTrade.address),
-  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true),
-  await predicateRegistry.setCash(await getAddress(ContractName.Cash, 'augur-matic')),
-  await predicateRegistry.setOICash(await getAddress(ContractName.OICash, 'augur-matic')),
+  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic'))
+  await predicateRegistry.setRootZeroXTrade(ZeroXTrade.address)
+  await predicateRegistry.setZeroXExchange(await getAddress(ContractName.ZeroXExchange, 'augur-matic'), ZeroXExchange.address, true)
+  await predicateRegistry.setCash(await getAddress(ContractName.Cash, 'augur-matic'))
+  await predicateRegistry.setOICash(await getAddress(ContractName.OICash, 'augur-matic'))
   await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
 
   const rootCashAddr = await getAddress(ContractName.Cash, 'augur-main')
@@ -121,7 +121,10 @@ export async function initializeAugurPredicate(predicateRegistry: PredicateRegis
   const ERC20PredicateAddr = await getAddress(ContractName.ERC20Predicate, 'plasma')
   const AugurAddr = await getAddress(ContractName.Augur, 'augur-main')
   const RegistryAddr = await getAddress(ContractName.Registry, 'plasma')
+  const exitFactory = await deployContract(owner, ExitFactoryArtifact)
+
   await AugurPredicate.connect(owner).initializeForMatic(
+    exitFactory.address,
     predicateRegistry.address,
     WithdrawManagerProxyAddr,
     ERC20PredicateAddr,
