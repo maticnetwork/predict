@@ -8,8 +8,8 @@ import { EthWallets, MaticWallets } from 'src/wallets'
 import { ASK_ORDER, AUGUR_FEE, BID_ORDER, DEFAULT_GAS, DEFAULT_TRADE_GROUP, MATIC_CHAIN_ID, VALIDATORS, NO_OUTCOME, INVALID_OUTCOME } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload, buildChallengeData } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
-import { createMarket } from 'src/setup'
+import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
+
 import { indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'
 import { ShareToken } from 'typechain/augur/ShareToken'
@@ -42,8 +42,6 @@ describe('AugurPredicate: Deprecation', function() {
   before(deployAndPrepareTrading)
   before('Prepare trading', async function() {
     market = await createMarket.call(this)
-
-    await approveAllForCashAndShareTokens('augur-matic')
   })
 
   shouldExecuteTrade({
@@ -55,19 +53,19 @@ describe('AugurPredicate: Deprecation', function() {
     orderFiller: { name: 'Bob', wallet: bobMatic },
     tradeGroupId,
     direction: BID_ORDER,
-    market: async () => market,
+    market: async() => market,
     order: async function(this: Context) {
       return createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: firstOrderAmount, 
-          price: 60, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: firstOrderAmount,
+          price: 60,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: BID_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     },
@@ -83,38 +81,38 @@ describe('AugurPredicate: Deprecation', function() {
 
     before('Alice creates order', async function() {
       secondOrder = await createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: secondOrderAmount, 
-          price: secondOrderSharePrice, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: secondOrderAmount,
+          price: secondOrderSharePrice,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: ASK_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     })
 
     describe('when Alice and Bob claims their shares', function() {
       let bobExit: ExitPayload
-  
+
       describe('when Bob initializes exit from the last uncensored trade', function() {
         before('Initialize exit', async function() {
           await this.augurPredicate.other.clearExit(bob.address)
           const contracts = await initializeAugurPredicateExit.call(this, bob)
           bobExitCashToken = contracts.exitCashToken
           bobExitShareToken = contracts.exitShareToken
-  
+
           bobExit = await this.checkpointHelper.submitCheckpoint(VALIDATORS, firstTradeResult.tradeReceipt!.transactionHash, alice.address)
         })
-  
+
         after(async function() {
           // @discuss Do we expect a counterparty to have "Invalid shares" as well - to go short on an outcome...?
           await this.augurPredicate.other.claimShareBalanceFaucet(bob.address, market.address, INVALID_OUTCOME, firstOrderFilledAmount)
         })
-  
+
         describe('when Bob claims his shares', function() {
           describe('when provide proof of Alice balance', function() {
             before('provide proof of counterparty balance', function() {
@@ -129,29 +127,29 @@ describe('AugurPredicate: Deprecation', function() {
                 outcome: NO_OUTCOME
               })
             })
-  
+
             it('should claim shares', async function() {
               // TODO makes no sense for Bob to claim shares for Alice
               await this.augurPredicate.other.claimShareBalance(buildReferenceTxPayload(bobExit))
             })
-  
+
             it('Alice should have correct market outcome balance', async function() {
               await assertTokenBalances(bobExitShareToken, market.rootMarket.address, alice.address, [0, firstOrderFilledAmount, 0])
             })
           })
-  
+
           describe('when Bob claims his cash', function() {
             describe('when Bob performed cash transfer', function() {
               let receipt: ContractReceipt
-  
+
               before('Transfer', async function() {
                 // dummy transfer to build a proof of funds
                 const transfer = await this.maticCash.other.transfer('0x0000000000000000000000000000000000000001', 0)
                 receipt = await transfer.wait(0)
-  
+
                 bobExit = await this.checkpointHelper.submitCheckpoint(VALIDATORS, receipt.transactionHash, alice.address)
               })
-  
+
               it('should claim shares', async function() {
                 bobExit.logIndex = indexOfEvent({
                   logs: receipt.logs,
@@ -161,7 +159,7 @@ describe('AugurPredicate: Deprecation', function() {
                 })
                 await this.augurPredicate.other.claimCashBalance(buildReferenceTxPayload(bobExit), bob.address)
               })
-  
+
               it('should have correct exit cash balance', async function() {
                 expect(await bobExitCashToken.balanceOf(bob.address))
                   .to.be.equal(await this.maticCash.contract.balanceOf(bob.address))
@@ -171,13 +169,13 @@ describe('AugurPredicate: Deprecation', function() {
         })
       })
     })
-  
+
     shouldExecuteCensoredTrade({
       orderAmount: secondOrderAmount,
       tradeGroupId,
-      market: async () => market,
-      exitShare: async () => bobExitShareToken,
-      exitCash: async () => bobExitCashToken,
+      market: async() => market,
+      exitShare: async() => bobExitShareToken,
+      exitCash: async() => bobExitCashToken,
       orderCreator: { name: 'Alice', wallet: aliceMatic },
       orderFiller: { name: 'Bob', wallet: bobMatic },
       direction: ASK_ORDER,
@@ -187,11 +185,11 @@ describe('AugurPredicate: Deprecation', function() {
       },
       expectedCashDelta: {
         orderCreator: secondOrderAmount * secondOrderSharePrice,
-        // must use market.numTicks but in this case it is always 100 
+        // must use market.numTicks but in this case it is always 100
         // read https://augur.gitbook.io/augur/contracts/overview#creation-parameters Num Ticks (Scalar Only)
         orderFiller: -(secondOrderAmount * (100 - secondOrderSharePrice))
       },
-      order: async () => secondOrder
+      order: async() => secondOrder
     })
   })
 
@@ -242,8 +240,8 @@ describe('AugurPredicate: Deprecation', function() {
         value: AUGUR_FEE,
         chainId: MATIC_CHAIN_ID,
         nonce: await bobMatic.getTransactionCount(),
-        data: this.maticZeroXTrade.contract.interface.encodeFunctionData('trade', 
-          [100, secondOrder.affiliateAddress, tradeGroupId, secondOrder.orders, secondOrder.signatures]
+        data: this.maticZeroXTrade.contract.interface.encodeFunctionData('trade',
+          [100, '0x0', tradeGroupId, 0, 100, secondOrder.orders, secondOrder.signatures]
         )
       }
 
@@ -258,8 +256,8 @@ describe('AugurPredicate: Deprecation', function() {
       await expect(
         this.withdrawManager.from.challengeExit(bobExitId, 0, challengeData, this.augurPredicate.address)
       )
-      .to.emit(this.withdrawManager.contract, 'ExitCancelled')
-      .withArgs(bobExitId)
+        .to.emit(this.withdrawManager.contract, 'ExitCancelled')
+        .withArgs(bobExitId)
     })
 
     it('Alice should challenge own exit', async function() {
@@ -267,8 +265,8 @@ describe('AugurPredicate: Deprecation', function() {
       await expect(
         this.withdrawManager.from.challengeExit(aliceExitId, 0, challengeData, this.augurPredicate.address)
       )
-      .to.emit(this.withdrawManager.contract, 'ExitCancelled')
-      .withArgs(aliceExitId)
+        .to.emit(this.withdrawManager.contract, 'ExitCancelled')
+        .withArgs(aliceExitId)
     })
   })
 })

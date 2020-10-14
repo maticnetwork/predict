@@ -14,12 +14,20 @@ yarn --cwd "augur" build
 
 cd augur/packages/augur-core
 pip install -r requirements.txt
+cd -
 
 yarn --cwd "predicate/packages/augur-core"
 yarn --cwd "predicate" build
 
-cd -
 cd predicate/packages/augur-core 
 pip install -r requirements.txt
+cd -
+
+yarn --cwd "augur-sidechain/packages/augur-core"
+yarn --cwd "augur-sidechain" build
+
+cd augur-sidechain/packages/augur-core 
+pip install -r requirements.txt
+cd -
 
 source ~/.bashrc

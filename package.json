@@ -5,15 +5,15 @@
   "author": "atvanguard <93arpit@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "install": "buidler install",
+    "install": "npx buidler install",
     "build": "yarn compile && yarn typechain",
-    "typechain": "buidler typechain",
-    "compile": "buidler compile && yarn typechain",
+    "typechain": "npx buidler typechain",
+    "compile": "npx buidler compile && yarn typechain",
     "migrate:local": "truffle migrate --reset --network development",
     "test": "npx mocha -r ts-node/register -r tsconfig-paths/register -r source-map-support/register -r mocha-steps -b -t 0 --watch-extensions ts \"test/**/*.ts\"",
-    "test:truffle": "buidler test --network localhost",
-    "testrpc:main": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 --port 9545",
-    "testrpc:bor": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 --port 8545 --networkId 15001"
+    "test:truffle": "npx buidler test --network localhost",
+    "testrpc:main": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 --port 8545",
+    "testrpc:bor": "ganache-cli --account '0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5a,1000000000000000000000000' --account '0x48c5da6dff330a9829d843ea90c2629e8134635a294c7e62ad4466eb2ae03712,1000000000000000000000000' --gasLimit 10000000 --gasPrice 0 --port 9545 --networkId 15001"
   },
   "dependencies": {
     "@nomiclabs/buidler": "^1.4.5",
@@ -43,7 +43,8 @@
     "typechain": "^2.0.0",
     "typescript": "^4.0.2",
     "web3": "^1.3.0",
-    "web3-eth-abi": "^1.2.11"
+    "web3-eth-abi": "^1.2.11",
+    "openzeppelin-solidity": "2.2.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.0.1",

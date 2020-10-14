@@ -1,10 +1,14 @@
 import { expect } from 'chai'
 import { AUGUR_FEE, ASK_ORDER } from 'src/constants'
-import { Counterparty } from 'src/types'
+import { ContractName, Counterparty } from 'src/types'
 import { Order } from 'src/orders'
 import { assertTokenBalances } from 'src/assert'
 import { BigNumber, ContractReceipt } from "ethers"
 import { MarketInfo } from 'src/setup'
+import { formatBytes32String, hexlify, hexValue } from 'ethers/lib/utils'
+import { getDeployed } from 'src/deployedContracts'
+import { SideChainFillOrder } from 'typechain/augur/SideChainFillOrder'
+import { findEvents } from 'src/events'
 
 export interface TradeReturnValues {
   tradeReceipt?: ContractReceipt;
@@ -27,7 +31,7 @@ export interface ExecuteOrderOptions {
   }
 }
 
-export function shouldExecuteTrade(options: ExecuteOrderOptions) {
+export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
   const {
     orderAmount,
     sharePrice,
@@ -46,28 +50,30 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions) {
   let order: Order
   const filledAmount = Math.min(fillAmount, orderAmount)
 
-  describe(`${orderFiller.name} fills ${direction == ASK_ORDER ? 'ask' : 'bid'} of ${orderCreator.name}`, function() {
-    before(async function() {
+  describe(`${orderFiller.name} fills ${direction === ASK_ORDER ? 'ask' : 'bid'} of ${orderCreator.name}`, function() {
+    before('get market and order', async function() {
       market = await options.market.call(this)
       order = await options.order.call(this)
     })
 
-    before(async function() {
+    before('save balances', async function() {
       orderCreatorInitialBalance = await this.maticCash.contract.balanceOf(orderCreator.wallet.address)
       orderFillerInitialBalance = await this.maticCash.contract.balanceOf(orderFiller.wallet.address)
     })
 
     it('should trade', async function() {
-      const { affiliateAddress, orders, signatures } = order
-      let amountRemaining = await this.maticZeroXTrade
+      const { orders, signatures } = order
+      console.log('trade 1')
+      const amountRemaining = await this.maticZeroXTrade
         .contract.connect(orderFiller.wallet)
-        .callStatic.trade(fillAmount, affiliateAddress, tradeGroupId, orders, signatures, { value: AUGUR_FEE })
+        .callStatic.trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
       expect(amountRemaining).to.be.equal(fillAmount - orderAmount)
 
+      console.log('trade 2')
       const tradeTx = await this.maticZeroXTrade
         .contract.connect(orderFiller.wallet)
-        .trade(fillAmount, affiliateAddress, tradeGroupId, orders, signatures, { value: AUGUR_FEE })
+        .trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
       returnValues.tradeReceipt = await tradeTx.wait(0)
     })

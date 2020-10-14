@@ -7,6 +7,7 @@ export interface TypechainConfig {
 
 export interface ArtifactPaths {
   core: string;
+  augur: string;
 }
 
 /// <reference types="@nomiclabs/buidler/types" />
@@ -24,10 +25,7 @@ declare module '@nomiclabs/buidler/types' {
   }
 
   export interface ProjectPaths {
-    augur: string;
-    augurPredicate: string;
+    augur?: string;
     core: string;
   }
 }
-
-

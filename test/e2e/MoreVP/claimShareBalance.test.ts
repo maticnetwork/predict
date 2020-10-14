@@ -8,8 +8,8 @@ import { EthWallets, MaticWallets } from 'src/wallets'
 import { ASK_ORDER, BID_ORDER, INVALID_OUTCOME, MAX_FEE, NO_OUTCOME, VALIDATORS, YES_OUTCOME } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
-import { createMarket } from 'src/setup'
+import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
+
 import { indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'
 import { processExits, finalizeMarket } from 'src/exits'
@@ -26,7 +26,7 @@ describe('AugurPredicate: Claim Share Balance', function() {
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = utils.hexZeroPad(utils.hexValue(42), 32)
 
-  let firstOrderAmount = 1000; 
+  const firstOrderAmount = 1000
   const fillAmount = 1200
   const firstOrderFilledAmount = Math.min(firstOrderAmount, fillAmount)
 
@@ -41,8 +41,6 @@ describe('AugurPredicate: Claim Share Balance', function() {
   before(deployAndPrepareTrading)
   before('Prepare trading', async function() {
     market = await createMarket.call(this)
-
-    await approveAllForCashAndShareTokens('augur-matic')
   })
 
   shouldExecuteTrade({
@@ -54,19 +52,19 @@ describe('AugurPredicate: Claim Share Balance', function() {
     orderFiller: { name: 'Bob', wallet: bobMatic },
     tradeGroupId,
     direction: BID_ORDER,
-    market: async () => market,
+    market: async() => market,
     order: async function(this: Context) {
       return createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: firstOrderAmount, 
-          price: 60, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: firstOrderAmount,
+          price: 60,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: BID_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     },
@@ -80,19 +78,19 @@ describe('AugurPredicate: Claim Share Balance', function() {
     let bobExit: ExitPayload
     const secondOrderAmount = 300
     const secondOrderSharePrice = 70
-    
+
     before('Alice creates order', async function() {
       secondOrder = await createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: secondOrderAmount, 
-          price: secondOrderSharePrice, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: secondOrderAmount,
+          price: secondOrderSharePrice,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: ASK_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     })
@@ -156,7 +154,7 @@ describe('AugurPredicate: Claim Share Balance', function() {
             })
 
             it('Bob should have correct market outcome balance', async function() {
-              await assertTokenBalances(bobExitShareToken, market.rootMarket.address, bob.address, [0, 0, firstOrderFilledAmount])
+              await assertTokenBalances(bobExitShareToken, market.address, bob.address, [0, 0, firstOrderFilledAmount])
             })
           })
         })
@@ -166,9 +164,9 @@ describe('AugurPredicate: Claim Share Balance', function() {
     shouldExecuteCensoredTrade({
       orderAmount: secondOrderAmount,
       tradeGroupId,
-      market: async () => market,
-      exitShare: async () => bobExitShareToken,
-      exitCash: async () => bobExitCashToken,
+      market: async() => market,
+      exitShare: async() => bobExitShareToken,
+      exitCash: async() => bobExitCashToken,
       orderCreator: { name: 'Alice', wallet: aliceMatic },
       orderFiller: { name: 'Bob', wallet: bobMatic },
       direction: ASK_ORDER,
@@ -178,9 +176,9 @@ describe('AugurPredicate: Claim Share Balance', function() {
       },
       expectedCashDelta: {
         orderCreator: (secondOrderAmount * secondOrderSharePrice) * (1 - MAX_FEE),
-        orderFiller: -(secondOrderAmount * secondOrderSharePrice) * (1-MAX_FEE)
+        orderFiller: -(secondOrderAmount * secondOrderSharePrice) * (1 - MAX_FEE)
       },
-      order: async () => secondOrder
+      order: async() => secondOrder
     })
   })
 
@@ -195,24 +193,24 @@ describe('AugurPredicate: Claim Share Balance', function() {
         // otherAccount is starting an exit for 700 shares of outcome 0 and 2 (balance from tests above)
         const exitId = await this.augurPredicate.contract.getExitId(bob.address)
         const exit = await this.augurPredicate.contract.lookupExit(exitId)
-  
+
         await expect(this.augurPredicate.other.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
           .withArgs(bob.address, exit.exitPriority.shl(1), this.oiCash.address, exitId, false)
       })
-  
+
       it('should exit', async function() {
         beforeOIBalancePredicate = await this.oiCash.contract.balanceOf(this.augurPredicate.address)
-    
+
         await processExits.call(this, this.oiCash.address)
       })
 
-      it('should have correct shares on ethereum',async function() {
-        await assertTokenBalances(this.shareToken.contract, market.rootMarket.address, bob.address, [700, 0, 700])
+      it('should have correct shares on ethereum', async function() {
+        await assertTokenBalances(this.shareToken.contract, market.address, bob.address, [700, 0, 700])
       })
 
       it('augur predicate should have correct shares on ethereum', async function() {
-        await assertTokenBalances(this.shareToken.contract, market.rootMarket.address, this.augurPredicate.address, [0, 700, 0])
+        await assertTokenBalances(this.shareToken.contract, market.address, this.augurPredicate.address, [0, 700, 0])
       })
 
       it('augur predicate should have correct OICash balance on ethereum', async function() {
@@ -230,12 +228,12 @@ describe('AugurPredicate: Claim Share Balance', function() {
       it('should start exit', async function() {
         const { exitShareToken } = await initializeAugurPredicateExit.call(this, alice)
         await this.augurPredicate.from.claimShareBalanceFaucet(alice.address, market.address, 1, 700)
-        await assertTokenBalances(exitShareToken, market.rootMarket.address, alice.address, [0, 700, 0])
-  
+        await assertTokenBalances(exitShareToken, market.address, alice.address, [0, 700, 0])
+
         const exitId = await this.augurPredicate.contract.getExitId(alice.address)
         const exit = await this.augurPredicate.contract.lookupExit(exitId)
         aliceExitId = exitId
-  
+
         await expect(this.augurPredicate.from.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
           .withArgs(alice.address, exit.exitPriority.shl(1), this.oiCash.address, exitId, false)
@@ -265,14 +263,14 @@ describe('AugurPredicate: Claim Share Balance', function() {
       })
 
       it('Alice must have 0 shares for all outcomes on ethereum', async function() {
-        await assertTokenBalances(this.shareToken.contract, market.rootMarket.address, alice.address, [0, 0, 0])
+        await assertTokenBalances(this.shareToken.contract, market.address, alice.address, [0, 0, 0])
       })
 
       it('augur predicate must have 0 shares for all outcomes on ethereum', async function() {
-        await assertTokenBalances(this.shareToken.contract, market.rootMarket.address, this.augurPredicate.address, [0, 0, 0])
+        await assertTokenBalances(this.shareToken.contract, market.address, this.augurPredicate.address, [0, 0, 0])
       })
 
-      it('Alice must have correct cash balance on ethereum',async function() {
+      it('Alice must have correct cash balance on ethereum', async function() {
         expect(
           await this.cash.contract.balanceOf(alice.address)
         ).to.be.eq(beforeCashBalance.add(700 * 100))

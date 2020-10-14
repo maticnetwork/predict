@@ -1,5 +1,5 @@
-import { getDeployed, getAddress, createContract, connectedContract } from 'src/deployedContracts'
-import { DEFAULT_MARKET_DURATION, MAX_AMOUNT } from './constants'
+import { getAddress, createContract, connectedContract } from 'src/deployedContracts'
+import { DEFAULT_MARKET_DURATION, MAX_AMOUNT, NULL_ADDRESS } from './constants'
 import { ContractType, ContractName, ConnectedUniverse } from 'src/types'
 
 import { Cash } from 'typechain/augur/Cash'
@@ -8,8 +8,8 @@ import { Universe } from 'typechain/augur/Universe'
 import { Market } from 'typechain/augur/Market'
 
 export async function deployReasonableYesNoMarket(universe: ConnectedUniverse, endTime: number): Promise<string> {
-  const marketAddress = await universe.from.callStatic.createYesNoMarket(endTime, 0, 0, universe.fromAddress, '')
-  await universe.from.createYesNoMarket(endTime, 0, 0, universe.fromAddress, '')
+  const marketAddress = await universe.from.callStatic.createYesNoMarket(endTime, 0, NULL_ADDRESS, 0, universe.fromAddress, '')
+  await universe.from.createYesNoMarket(endTime, 0, NULL_ADDRESS, 0, universe.fromAddress, '')
   return marketAddress
 }
 

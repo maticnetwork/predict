@@ -8,8 +8,8 @@ import { EthWallets, MaticWallets } from 'src/wallets'
 import { DEFAULT_TRADE_GROUP, BID_ORDER, ASK_ORDER, VALIDATORS, NO_OUTCOME } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo } from 'src/setup'
-import { createMarket } from 'src/setup'
+import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
+
 import { indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'
 import { processExits } from 'src/exits'
@@ -27,7 +27,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
 
-  let firstOrderAmount = 1000; 
+  const firstOrderAmount = 1000
   const fillAmount = 1200
   const firstOrderFilledAmount = Math.min(firstOrderAmount, fillAmount)
 
@@ -42,8 +42,6 @@ describe('AugurPredicate: Claim Cash Balance', function() {
   before(deployAndPrepareTrading)
   before('Prepare trading', async function() {
     market = await createMarket.call(this)
-
-    await approveAllForCashAndShareTokens('augur-matic')
   })
 
   shouldExecuteTrade({
@@ -55,19 +53,19 @@ describe('AugurPredicate: Claim Cash Balance', function() {
     orderFiller: { name: 'Bob', wallet: bobMatic },
     tradeGroupId,
     direction: BID_ORDER,
-    market: async () => market,
+    market: async() => market,
     order: async function(this: Context) {
       return createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: firstOrderAmount, 
-          price: 60, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: firstOrderAmount,
+          price: 60,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: BID_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     },
@@ -84,16 +82,16 @@ describe('AugurPredicate: Claim Cash Balance', function() {
 
     before('Alice creates order', async function() {
       secondOrder = await createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: secondOrderAmount, 
-          price: secondOrderSharePrice, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: secondOrderAmount,
+          price: secondOrderSharePrice,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: ASK_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     })
@@ -129,7 +127,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
             })
 
             it('Alice should have correct market outcome balance', async function() {
-              await assertTokenBalances(bobExitShareToken, market.rootMarket.address, alice.address, [0, firstOrderFilledAmount, 0])
+              await assertTokenBalances(bobExitShareToken, market.address, alice.address, [0, firstOrderFilledAmount, 0])
             })
           })
         })
@@ -167,9 +165,9 @@ describe('AugurPredicate: Claim Cash Balance', function() {
     shouldExecuteCensoredTrade({
       orderAmount: secondOrderAmount,
       tradeGroupId,
-      market: async () => market,
-      exitShare: async () => bobExitShareToken,
-      exitCash: async () => bobExitCashToken,
+      market: async() => market,
+      exitShare: async() => bobExitShareToken,
+      exitCash: async() => bobExitCashToken,
       orderCreator: { name: 'Alice', wallet: aliceMatic },
       orderFiller: { name: 'Bob', wallet: bobMatic },
       direction: ASK_ORDER,
@@ -181,7 +179,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
         orderCreator: secondOrderAmount * secondOrderSharePrice,
         orderFiller: -(secondOrderAmount * secondOrderSharePrice)
       },
-      order: async () => secondOrder
+      order: async() => secondOrder
     })
   })
 
@@ -198,7 +196,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
         // otherAccount is starting an exit for 700 shares of outcome 0 and 2 (balance alice tests above)
         const exitId = await this.augurPredicate.contract.getExitId(bob.address)
         const exit = await this.augurPredicate.contract.lookupExit(exitId)
-  
+
         await expect(this.augurPredicate.other.startExit())
           .to.emit(this.withdrawManager.contract, 'ExitStarted')
           .withArgs(bob.address, exit.exitPriority.shl(1), this.oiCash.address, exitId, false)
@@ -209,13 +207,13 @@ describe('AugurPredicate: Claim Cash Balance', function() {
           await this.cash.contract.balanceOf(bob.address)
         ).to.be.eq(0)
       })
-  
+
       it('should exit', async function() {
         await processExits.call(this, this.oiCash.address)
       })
 
       it('Bob should have correct market outcome balances', async function() {
-        await assertTokenBalances(this.shareToken.contract, market.rootMarket.address, bob.address, [0, 300, 0])
+        await assertTokenBalances(this.shareToken.contract, market.address, bob.address, [0, 300, 0])
       })
 
       it('Bob should have correct OICash balance on ethereum', async function() {
@@ -225,7 +223,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
       })
 
       it('augur predicate should have correct market outcome balances', async function() {
-        await assertTokenBalances(this.shareToken.contract, market.rootMarket.address, this.augurPredicate.address, [300, 0, 300])
+        await assertTokenBalances(this.shareToken.contract, market.address, this.augurPredicate.address, [300, 0, 300])
       })
 
       it('augur predicate should have correct OICash balance on ethereum', async function() {

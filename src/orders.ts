@@ -1,11 +1,14 @@
-import { BigNumber, constants, Wallet } from 'ethers'
+import { BigNumberish, BytesLike, constants, Wallet } from 'ethers'
 import { Context } from 'mocha'
-import { ZeroXTrade } from 'typechain/augur/ZeroXTrade'
-import { ZeroXExchange } from 'typechain/augur/ZeroXExchange'
-import { ContractType, ContractName } from 'src/types'
-import { getDeployed } from 'src/deployedContracts'
+import { ContractName, ContractType } from 'src/types'
 import { toBuffer, bufferToHex } from 'ethereumjs-util'
 import { sign0x } from './utils'
+import { NULL_ADDRESS } from './constants'
+import { assertTokenBalances } from './assert'
+import { getDeployed } from './deployedContracts'
+import { MarketRegistry } from 'typechain/augur/MarketRegistry'
+import { AugurRegistry } from 'typechain/augur/AugurRegistry'
+import { SideChainFillOrder } from 'typechain/augur/SideChainFillOrder'
 
 export interface OrderRequest {
   price: number;
@@ -19,29 +22,19 @@ export interface OrderRequest {
 export interface Order {
   orders: {
     makerAddress: string;
-        takerAddress: string;
-        feeRecipientAddress: string;
-        senderAddress: string;
-        makerAssetAmount: BigNumber;
-        takerAssetAmount: BigNumber;
-        makerFee: BigNumber;
-        takerFee: BigNumber;
-        expirationTimeSeconds: BigNumber;
-        salt: BigNumber;
-        makerAssetData: string;
-        takerAssetData: string;
-        0: string;
-        1: string;
-        2: string;
-        3: string;
-        4: BigNumber;
-        5: BigNumber;
-        6: BigNumber;
-        7: BigNumber;
-        8: BigNumber;
-        9: BigNumber;
-        10: string;
-        11: string;
+    takerAddress: string;
+    feeRecipientAddress: string;
+    senderAddress: string;
+    makerAssetAmount: BigNumberish;
+    takerAssetAmount: BigNumberish;
+    makerFee: BigNumberish;
+    takerFee: BigNumberish;
+    expirationTimeSeconds: BigNumberish;
+    salt: BigNumberish;
+    makerAssetData: BytesLike;
+    takerAssetData: BytesLike;
+    makerFeeAssetData: BytesLike;
+    takerFeeAssetData: BytesLike;
   }[],
   signatures: string[],
   affiliateAddress: string
@@ -53,22 +46,22 @@ export async function createOrder(this: Context, request: OrderRequest, contract
   // Get the on chain timestamp. We'll use this to calculate the order expiration and as the salt for the order
   const expirationTime = currentTime + duration
   // Make a call to our contract to properly format the signed order and get the hash for it that we must sign
-  const zeroXTrade = await getDeployed<ZeroXTrade>(ContractName.ZeroXTrade, contractType)
-  const zeroXExchange = await getDeployed<ZeroXExchange>(ContractName.ZeroXExchange, contractType)
-
-  const { _zeroXOrder, _orderHash } = await zeroXTrade.connect(from).callStatic.createZeroXOrder(
+  const { _zeroXOrder, _orderHash } = await this.maticZeroXTrade.contract.connect(from).createZeroXOrder(
     direction,
     amount,
     price,
     marketAddress,
     outcome,
-    constants.AddressZero,
     expirationTime,
-    zeroXExchange.address,
-    currentTime
+    '1'
   )
 
-  // append signature type byte that is required by Augur
+  const fillOrder = await getDeployed(ContractName.SideChainFillOrder, 'augur-matic') as SideChainFillOrder
+  const c = await fillOrder.storedContracts()
+  console.log(c)
+
+  // append signature type byte "3"
+  // that is required by Augur's signature verification
   const signature = bufferToHex(
     Buffer.concat(
       [
@@ -77,12 +70,6 @@ export async function createOrder(this: Context, request: OrderRequest, contract
       ]
     )
   )
-
-  // Confirm the signature is valid
-  const sigValid = await zeroXExchange.isValidSignature(_orderHash, from.address, signature)
-  if (!sigValid) {
-    throw new Error('Signature not valid')
-  }
 
   const orders = [_zeroXOrder]
   const signatures = [signature]

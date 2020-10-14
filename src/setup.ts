@@ -1,8 +1,7 @@
 import { deployMarket } from './augur'
 import { Context } from 'mocha'
 import { Market } from 'typechain/augur/Market'
-import { BigNumber, Signer } from 'ethers'
-import { deployContract } from 'ethereum-waffle'
+import { Signer } from 'ethers'
 import { ContractType, ContractName } from 'src/types'
 import { MAX_AMOUNT } from 'src/constants'
 import { EthWallets } from './wallets'
@@ -14,11 +13,9 @@ import { RootchainAdapter } from './rootChainAdapter'
 import { EthersAdapter } from '@maticnetwork/plasma'
 
 import { Cash } from 'typechain/augur/Cash'
-import { StateSender } from 'typechain/core/StateSender'
 import { ShareToken } from 'typechain/augur/ShareToken'
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Web3EthAbi = require('web3-eth-abi')
+import { syncDeposit, syncMarketInfo } from './utils'
+import { parseEther } from 'ethers/lib/utils'
 
 export interface MarketInfo {
   numTicks: number;
@@ -29,27 +26,28 @@ export interface MarketInfo {
 
 export async function createMarket(this: Context): Promise<MarketInfo> {
   // Create market on main chain augur
-  let currentTime = (await this.augur.contract.getTimestamp()).toNumber()
+  const currentTime = (await this.augur.contract.getTimestamp()).toNumber()
   const rootMarket = await deployMarket(currentTime, 'augur-main')
 
-  // Create corresponding market on Matic
-  currentTime = (await this.maticAugur.contract.getTimestamp()).toNumber()
-  const market = await deployMarket(currentTime, 'augur-matic')
+  // Sync market to the Matic
+  await syncMarketInfo(this.augurRegistry.from, rootMarket)
 
   const numOutcomes = await rootMarket.getNumberOfOutcomes()
   const numTicks = (await rootMarket.getNumTicks()).toNumber()
+
+  // TODO remove it
   await this.predicateRegistry.from.mapMarket(
-    market.address,
+    rootMarket.address,
     rootMarket.address,
     numOutcomes,
     numTicks
   )
 
-  return { numTicks, address: market.address, currentTime, rootMarket }
+  return { numTicks, address: rootMarket.address, currentTime, rootMarket }
 }
 
 const [from, otherFrom] = EthWallets
-const defaultCashAmount = 100000
+const defaultCashAmount = parseEther('1000')
 
 export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await deployAll()
@@ -57,23 +55,20 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.from = from.address
   this.otherFrom = otherFrom.address
 
+  this.childChain = await connectedContract(ContractName.ChildChain, 'matic')
+  this.augurRegistry = await connectedContract(ContractName.AugurRegistry, 'augur-matic')
+
   this.rootChain = await getDeployed(ContractName.RootChain, 'plasma')
   this.withdrawManager = await connectedContract(ContractName.WithdrawManager, 'plasma')
 
   this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
 
-  this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'predicate')
+  this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'augur-main')
   this.oiCash = await connectedContract(ContractName.OICash, 'augur-main')
   this.maticOICash = await connectedContract(ContractName.OICash, 'augur-matic')
 
   this.cash = await connectedContract(ContractName.Cash, 'augur-main')
-  this.maticCash = await connectedContract(ContractName.Cash, 'augur-matic')
-
-  await this.maticOICash.from.changeStateSyncerAddress(from.address)
-  await this.augurPredicate.from.updateChildChainAndStateSender()
-
-  const stateSender = await getDeployed(ContractName.StateSender, 'plasma') as StateSender
-  await stateSender.connect(from).register(this.augurPredicate.address, this.maticCash.address)
+  this.maticCash = await connectedContract(ContractName.TradingCash, 'augur-matic')
 
   this.time = await connectedContract(ContractName.Time, 'augur-main')
   this.maticTime = await connectedContract(ContractName.Time, 'augur-matic')
@@ -82,20 +77,12 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.maticAugur = await connectedContract(ContractName.Augur, 'augur-matic')
 
   this.shareToken = await connectedContract(ContractName.ShareToken, 'augur-main')
-  this.maticShareToken = await connectedContract(ContractName.ShareToken, 'augur-matic')
+  this.maticShareToken = await connectedContract(ContractName.SideChainShareToken, 'augur-matic')
 
-  this.maticZeroXTrade = await connectedContract(ContractName.ZeroXTrade, 'augur-matic')
+  this.maticZeroXTrade = await connectedContract(ContractName.SideChainZeroXTrade, 'augur-matic')
   this.maticZeroXExchange = await connectedContract(ContractName.ZeroXExchange, 'augur-matic')
 
-  this.predicateRegistry = await connectedContract(ContractName.PredicateRegistry, 'predicate')
-
-  await this.cash.from.joinBurn(this.from, await this.cash.contract.balanceOf(this.from))
-  await this.cash.other.joinBurn(this.otherFrom, await this.cash.contract.balanceOf(this.otherFrom))
-  await this.maticCash.from.joinBurn(this.from, await this.maticCash.contract.balanceOf(this.from))
-  await this.maticCash.other.joinBurn(this.otherFrom, await this.maticCash.contract.balanceOf(this.otherFrom))
-
-  await this.maticCash.from.faucet(defaultCashAmount)
-  await this.maticCash.other.faucet(defaultCashAmount)
+  this.predicateRegistry = await connectedContract(ContractName.PredicateRegistry, 'augur-main')
 
   await this.cash.from.faucet(defaultCashAmount)
   await this.cash.other.faucet(defaultCashAmount)
@@ -103,46 +90,45 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await this.cash.other.approve(this.augurPredicate.contract.address, defaultCashAmount)
 
   await this.augurPredicate.from.deposit(defaultCashAmount)
+  await syncDeposit(this.childChain.from, this.from, this.oiCash.address, defaultCashAmount)
+
+  let b = await this.maticCash.contract.balanceOf(this.from)
+  console.log('from balance', b.toString())
+
   await this.augurPredicate.other.deposit(defaultCashAmount)
+  await syncDeposit(this.childChain.from, this.otherFrom, this.oiCash.address, defaultCashAmount)
 
-  await this.maticOICash.from.onStateReceive(0, Web3EthAbi.encodeParameters([
-    'address', 'uint256', 'bool'
-  ], [
-    from.address, defaultCashAmount, true /* mint */
-  ]))
+  b = await this.maticCash.contract.balanceOf(this.otherFrom)
+  console.log('otherFrom balance', b.toString())
 
-  await this.maticOICash.from.onStateReceive(0, Web3EthAbi.encodeParameters([
-    'address', 'uint256', 'bool'
-  ], [
-    otherFrom.address, defaultCashAmount, true /* mint */
-  ]))
-
-  // const daiJoinAmount = BigNumber.from(10).pow(27).mul(defaultCashAmount)
-  // const daiJoinAddr = await getAddress(ContractName.DaiJoin, 'augur-matic')
-
-  // const daiVat = await connectedContract<TestNetDaiVat>(ContractName.DaiVat, 'augur-matic')
-  // await daiVat.from.faucet(daiJoinAddr, daiJoinAmount)
-  // await daiVat.other.faucet(daiJoinAddr, daiJoinAmount)
+  await approveAllForCashAndShareTokens()
 }
 
-export async function approveAllForCashAndShareTokens(contractType: ContractType): Promise<void> {
-  const cash = await connectedContract<Cash>(ContractName.Cash, contractType)
-  const shareToken = await connectedContract<ShareToken>(ContractName.ShareToken, contractType)
+export async function approveAllForCashAndShareTokens(): Promise<void> {
+  const cash = await connectedContract<Cash>(ContractName.TradingCash, 'augur-matic')
+  const shareToken = await connectedContract<ShareToken>(ContractName.SideChainShareToken, 'augur-matic')
 
-  const augurAddr = await getAddress(ContractName.Augur, contractType)
-  const createOrder = await getAddress(ContractName.CreateOrder, contractType)
-  const fillOrder = await getAddress(ContractName.FillOrder, contractType)
+  const zeroXTradeAddr = await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic')
+  const augurAddr = await getAddress(ContractName.SideChainAugur, 'augur-matic')
+  const createOrder = await getAddress(ContractName.CreateOrder, 'augur-matic')
+  const fillOrder = await getAddress(ContractName.SideChainFillOrder, 'augur-matic')
 
   // not sure which of these approvals are actually required
+  cash.other.approve(zeroXTradeAddr, MAX_AMOUNT)
   cash.other.approve(augurAddr, MAX_AMOUNT)
   cash.other.approve(createOrder, MAX_AMOUNT)
   cash.other.approve(fillOrder, MAX_AMOUNT)
+
+  shareToken.other.setApprovalForAll(zeroXTradeAddr, true)
   shareToken.other.setApprovalForAll(createOrder, true)
   shareToken.other.setApprovalForAll(fillOrder, true)
 
+  cash.from.approve(zeroXTradeAddr, MAX_AMOUNT)
   cash.from.approve(augurAddr, MAX_AMOUNT)
   cash.from.approve(createOrder, MAX_AMOUNT)
   cash.from.approve(fillOrder, MAX_AMOUNT)
+
+  shareToken.from.setApprovalForAll(zeroXTradeAddr, true)
   shareToken.from.setApprovalForAll(createOrder, true)
   shareToken.from.setApprovalForAll(fillOrder, true)
 }
@@ -158,8 +144,8 @@ export async function initializeAugurPredicateExit(this: Context, from: Signer):
   const exitId = await connectedContract.getExitId(await from.getAddress())
   const exit = await connectedContract.lookupExit(exitId)
 
-  const exitShareToken = createContract(exit.exitShareToken, ContractName.ShareToken, 'predicate') as ShareToken
-  const exitCashToken = createContract(exit.exitCash, ContractName.Cash, 'predicate') as Cash
+  const exitShareToken = createContract(exit.exitShareToken, ContractName.ShareToken, 'augur-main') as ShareToken
+  const exitCashToken = createContract(exit.exitCash, ContractName.Cash, 'augur-main') as Cash
 
   return { exitShareToken, exitCashToken }
 }

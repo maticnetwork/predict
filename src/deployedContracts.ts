@@ -34,10 +34,6 @@ export function getAbi(contractName: ContractName, type: ContractType): any {
     case 'augur-matic':
       artifactPath = 'artifacts/augur'
       break
-
-    case 'predicate':
-      artifactPath = 'artifacts/predicate'
-      break
   }
 
   const jsonFile = readFileSync(join(artifactPath, `${contractName}.json`)).toString()

@@ -8,14 +8,15 @@ import { EthWallets, MaticWallets } from 'src/wallets'
 import { DEFAULT_TRADE_GROUP, BID_ORDER, VALIDATORS, NO_OUTCOME } from 'src/constants'
 import { createOrder } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, MarketInfo } from 'src/setup'
-import { createMarket } from 'src/setup'
-import { indexOfEvent } from 'src/events'
+import { deployAndPrepareTrading, approveAllForCashAndShareTokens, MarketInfo, createMarket } from 'src/setup'
+
+import { findEvents, indexOfEvent } from 'src/events'
 import { processExits } from 'src/exits'
 
 import { shouldExecuteTrade, TradeReturnValues } from '../behaviors/shouldExecuteTrade'
 import { Context } from 'mocha'
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const Web3EthAbi = require('web3-eth-abi')
 
 use(solidity)
@@ -29,7 +30,7 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
       let burnAmount: BigNumber
       let amountExpectedOnMatic: BigNumber
       let maticCashBalanceBeforeExit: BigNumber
-      
+
       before('Burn cash', async function() {
         cashBalanceBeforeExit = await this.cash.contract.balanceOf(wallet.address)
         maticCashBalanceBeforeExit = await this.maticCash.contract.balanceOf(wallet.address)
@@ -38,13 +39,13 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
         amountExpectedOnMatic = maticCashBalanceBeforeExit.sub(burnAmount)
         exitAmount = cashBalanceBeforeExit.add(burnAmount)
 
-        const tx = await this.maticCash.contract.connect(maticWallet).joinBurn(wallet.address, burnAmount)
+        const tx = await this.maticCash.contract.connect(maticWallet).withdraw(burnAmount)
         const receipt = await tx.wait(0)
 
         exitPayload = await this.checkpointHelper.submitCheckpoint(VALIDATORS, tx.hash, wallet.address)
         exitPayload.logIndex = indexOfEvent({
           logs: receipt.logs,
-          contractName: ContractName.Cash,
+          contractName: ContractName.TradingCash,
           contractType: 'augur-matic',
           eventName: 'Withdraw'
         })
@@ -56,7 +57,7 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
       })
 
       it('must process exits', async function() {
-        await processExits.call(this, this.cash.address)
+        await processExits.call(this, this.oiCash.address)
       })
 
       it('cash balance must be reflected on ethereum', async function() {
@@ -70,24 +71,11 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
           await this.maticCash.contract.balanceOf(wallet.address)
         ).to.be.eq(amountExpectedOnMatic)
       })
-
-      it('must have correct OICash balance on matic', async function() {
-        const stateParams = Web3EthAbi.encodeParameters([
-          'address', 'uint256', 'bool'
-        ], [
-          wallet.address, burnAmount.toString(), false /* mint */
-        ])
-        await this.maticCash.from.onStateReceive(0, stateParams)
-
-        expect(
-          await this.maticCash.contract.balanceOf(wallet.address)
-        ).to.be.eq(maticCashBalanceBeforeExit.sub(burnAmount))
-      })
     })
   })
 }
 
-describe('Exit with burnt cash', function() {
+describe.only('Exit with burnt cash', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
@@ -102,8 +90,6 @@ describe('Exit with burnt cash', function() {
   before(deployAndPrepareTrading)
   before('Prepare trading', async function() {
     market = await createMarket.call(this)
-
-    await approveAllForCashAndShareTokens('augur-matic')
   })
 
   shouldExecuteTrade({
@@ -115,19 +101,19 @@ describe('Exit with burnt cash', function() {
     orderFiller: { name: 'Bob', wallet: bobMatic },
     tradeGroupId,
     direction: BID_ORDER,
-    market: async () => market,
+    market: async() => market,
     order: async function(this: Context) {
       return createOrder.call(
-        this, 
-        { 
-          marketAddress: market.address, 
-          amount: firstOrderAmount, 
-          price: 60, 
-          currentTime: market.currentTime, 
+        this,
+        {
+          marketAddress: market.address,
+          amount: firstOrderAmount,
+          price: 60,
+          currentTime: market.currentTime,
           outcome: NO_OUTCOME,
           direction: BID_ORDER
-        }, 
-        'augur-matic', 
+        },
+        'augur-matic',
         aliceMatic
       )
     },

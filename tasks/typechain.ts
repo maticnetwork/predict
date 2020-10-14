@@ -15,17 +15,17 @@ task('typechain', 'Generate Typechain typings for compiled contracts', async fun
   const cwd: string = process.cwd()
 
   // generate typings for local contracts
-  await tsGenerator(
-    { cwd },
-    new TypeChain({
-      cwd,
-      rawConfig: {
-        files: `${config.paths.artifacts}/*.json`,
-        outDir: config.typechain.outDir,
-        target: config.typechain.target
-      }
-    })
-  )
+  // await tsGenerator(
+  //   { cwd },
+  //   new TypeChain({
+  //     cwd,
+  //     rawConfig: {
+  //       files: `${config.paths.artifacts}/*.json`,
+  //       outDir: config.typechain.outDir,
+  //       target: config.typechain.target
+  //     }
+  //   })
+  // )
 
   // generate typings for core contracts
   await tsGenerator(
@@ -34,7 +34,7 @@ task('typechain', 'Generate Typechain typings for compiled contracts', async fun
       cwd,
       rawConfig: {
         files: `${config.artifacts.core}/*.json`,
-        outDir: config.typechain.outDir + '/core',
+        outDir: `${config.typechain.outDir}/core`,
         target: config.typechain.target
       }
     })
@@ -46,25 +46,38 @@ task('typechain', 'Generate Typechain typings for compiled contracts', async fun
     new TypeChain({
       cwd,
       rawConfig: {
-        files: config.paths.artifacts + '/augur/*.json',
-        outDir: config.typechain.outDir + '/augur',
+        files: `${config.artifacts.augur}/*.json`,
+        outDir: `${config.typechain.outDir}/augur`,
         target: config.typechain.target
       }
     })
   )
 
-  // generate typings for augur predicates
-  await tsGenerator(
-    { cwd },
-    new TypeChain({
-      cwd,
-      rawConfig: {
-        files: config.paths.artifacts + '/predicate/*.json',
-        outDir: config.typechain.outDir + '/predicate',
-        target: config.typechain.target
-      }
-    })
-  )
+  // // generate typing for augur matic contracts
+  // await tsGenerator(
+  //   { cwd },
+  //   new TypeChain({
+  //     cwd,
+  //     rawConfig: {
+  //       files: config.paths.artifacts + '/augur-matic/*.json',
+  //       outDir: config.typechain.outDir + '/augur-matic',
+  //       target: config.typechain.target
+  //     }
+  //   })
+  // )
+
+  // // generate typings for augur predicates
+  // await tsGenerator(
+  //   { cwd },
+  //   new TypeChain({
+  //     cwd,
+  //     rawConfig: {
+  //       files: config.paths.artifacts + '/predicate/*.json',
+  //       outDir: config.typechain.outDir + '/predicate',
+  //       target: config.typechain.target
+  //     }
+  //   })
+  // )
 
   console.log('Successfully generated TypeChain artifacts!')
 })

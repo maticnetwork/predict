@@ -26,20 +26,18 @@ const config: BuidlerConfig = {
     fullTrace: true
   },
   paths: {
-    artifacts: './artifacts',
     cache: './cache',
     root: './',
     sources: './contracts',
     tests: './test',
-    augur: './artifacts/augur',
-    augurPredicate: './artifacts/predicate',
-    core: './artifacts/core'
+    core: 'core-contracts/build/contracts'
   },
   solc: {
     version: '0.5.17'
   },
   artifacts: {
-    core: 'core-contracts/build/contracts'
+    augur: './artifacts/augur',
+    core: './artifacts/core'
   },
   typechain: {
     outDir: 'typechain',

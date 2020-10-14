@@ -2,20 +2,20 @@ import { BigNumber, Wallet } from 'ethers'
 
 import { Cash } from 'typechain/augur/Cash'
 import { OiCash } from 'typechain/augur/OiCash'
-import { OiCash as MaticOiCash } from 'typechain/predicate/OiCash'
-import { AugurPredicate } from 'typechain/predicate/AugurPredicate'
+import { TradingCash as MaticOiCash } from 'typechain/augur/TradingCash'
+import { AugurPredicate } from 'typechain/augur/AugurPredicate'
 import { Universe } from 'typechain/augur/Universe'
 import { Augur } from 'typechain/augur/Augur'
-import { PredicateRegistry } from 'typechain/PredicateRegistry'
+import { PredicateRegistry } from 'typechain/augur/PredicateRegistry'
 import { TimeControlled } from 'typechain/augur/TimeControlled'
 import { ZeroXTrade } from 'typechain/augur/ZeroXTrade'
-import { ZeroXExchange } from 'typechain/augur/ZeroXExchange'
+import { Exchange as ZeroXExchange } from 'typechain/augur/Exchange'
 import { ShareToken } from 'typechain/augur/ShareToken'
 import { WithdrawManager } from 'typechain/core/WithdrawManager'
 
 import { ConnectedContract } from './deployedContracts'
 
-export type ContractType = 'plasma'|'predicate'|'augur-main'|'augur-matic'|'matic'
+export type ContractType = 'plasma'|'augur-main'|'augur-matic'|'matic'
 
 export enum ContractName {
   OICash = 'OICash',
@@ -28,10 +28,11 @@ export enum ContractName {
   ERC20Predicate = 'ERC20Predicate',
   Augur = 'Augur',
   ZeroXTrade = 'ZeroXTrade',
-  ZeroXExchange = 'ZeroXExchange',
+  ExitZeroXTrade = 'ExitZeroXTrade',
+  ZeroXExchange = 'Exchange',
   Cash = 'Cash',
   ShareToken = 'ShareToken',
-TestToken = 'TestToken',
+  TestToken = 'TestToken',
   StakeManager = 'StakeManager',
   RootChain = 'RootChain',
   TestNetReputationToken = 'TestNetReputationToken',
@@ -44,7 +45,16 @@ TestToken = 'TestToken',
   DepositManager = 'DepositManager',
   StateSender = 'StateSender',
   DaiVat = 'TestNetDaiVat',
-  DaiJoin = 'TestNetDaiJoin'
+  DaiJoin = 'TestNetDaiJoin',
+  AugurSyncer = 'AugurSyncer',
+  SideChainZeroXTrade = 'SideChainZeroXTrade',
+  TradingCash = 'TradingCash',
+  ChildChain = 'ChildChain',
+  AugurRegistry = 'AugurRegistry',
+  SideChainAugur = 'SideChainAugur',
+  SideChainFillOrder = 'SideChainFillOrder',
+  SideChainShareToken = 'SideChainShareToken',
+  TradeLib = 'TradeLib'
 }
 
 export function toBN(value: any): BigNumber {
