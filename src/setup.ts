@@ -114,19 +114,19 @@ export async function approveAllForCashAndShareTokens(): Promise<void> {
   const fillOrder = await getAddress(ContractName.SideChainFillOrder, 'augur-matic')
 
   // not sure which of these approvals are actually required
-  cash.other.approve(zeroXTradeAddr, MAX_AMOUNT)
-  cash.other.approve(augurAddr, MAX_AMOUNT)
-  cash.other.approve(createOrder, MAX_AMOUNT)
-  cash.other.approve(fillOrder, MAX_AMOUNT)
+  // cash.other.approve(zeroXTradeAddr, MAX_AMOUNT)
+  // cash.other.approve(augurAddr, MAX_AMOUNT)
+  // cash.other.approve(createOrder, MAX_AMOUNT)
+  // cash.other.approve(fillOrder, MAX_AMOUNT)
 
   shareToken.other.setApprovalForAll(zeroXTradeAddr, true)
   shareToken.other.setApprovalForAll(createOrder, true)
   shareToken.other.setApprovalForAll(fillOrder, true)
 
-  cash.from.approve(zeroXTradeAddr, MAX_AMOUNT)
-  cash.from.approve(augurAddr, MAX_AMOUNT)
-  cash.from.approve(createOrder, MAX_AMOUNT)
-  cash.from.approve(fillOrder, MAX_AMOUNT)
+  // cash.from.approve(zeroXTradeAddr, MAX_AMOUNT)
+  // cash.from.approve(augurAddr, MAX_AMOUNT)
+  // cash.from.approve(createOrder, MAX_AMOUNT)
+  // cash.from.approve(fillOrder, MAX_AMOUNT)
 
   shareToken.from.setApprovalForAll(zeroXTradeAddr, true)
   shareToken.from.setApprovalForAll(createOrder, true)

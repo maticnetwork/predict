@@ -138,8 +138,10 @@ async function deployAugurPredicate(): Promise<PredicateRegistry> {
 async function deployCash() {
   const maticOwner = MaticWallets[0]
   // deploy Generic ERC20 for trading on Matic
-  const tradingCash = (await deployContract(maticOwner, TradingCashArtifact, [await getAddress(ContractName.OICash, 'augur-main')])) as TradingCash
-  await tradingCash.connect(maticOwner).changeChildChain(await getAddress(ContractName.ChildChain, 'matic'))
+  let tradingCash = (await deployContract(maticOwner, TradingCashArtifact, [await getAddress(ContractName.OICash, 'augur-main')])) as TradingCash
+  tradingCash = tradingCash.connect(maticOwner)
+  await tradingCash.changeChildChain(await getAddress(ContractName.ChildChain, 'matic'))
+
   return tradingCash.address
 }
 
@@ -159,7 +161,8 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
 
   await predicateRegistry.setZeroXExchange(maticExchangeAddr, ZeroXExchange.address, true)
 
-  const tradingCashAddr = await getAddress(ContractName.TradingCash, 'augur-matic')
+  const tradingCash = await connectedContract<TradingCash>(ContractName.TradingCash, 'augur-matic')
+  const tradingCashAddr = tradingCash.address
   await predicateRegistry.setCash(tradingCashAddr) // set it as cash
   await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
 
@@ -250,6 +253,15 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   const childChain: ChildChain = await getDeployed(ContractName.ChildChain, 'matic')
   await childChain.connect(maticFrom).changeStateSyncerAddress(maticFrom.address)
   await childChain.connect(maticFrom).mapToken(rootOICash.address, tradingCashAddr, false)
+
+  // whitelist TradingCash spenders
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainFillOrder, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainAugurTrading, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainAugur, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainShareToken, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.Exchange, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.CreateOrder, 'augur-matic'), true)
 }
 
 async function prepareRootChainForTesting() {

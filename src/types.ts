@@ -40,6 +40,7 @@ export enum ContractName {
   Time = 'TimeControlled',
   PredicateRegistry = 'PredicateRegistry',
   CreateOrder = 'CreateOrder',
+  Exchange = 'Exchange',
   FillOrder = 'FillOrder',
   DisputeWindow = 'DisputeWindow',
   DepositManager = 'DepositManager',
@@ -54,6 +55,7 @@ export enum ContractName {
   SideChainAugur = 'SideChainAugur',
   SideChainFillOrder = 'SideChainFillOrder',
   SideChainShareToken = 'SideChainShareToken',
+  SideChainAugurTrading = 'SideChainAugurTrading',
   TradeLib = 'TradeLib'
 }
 
