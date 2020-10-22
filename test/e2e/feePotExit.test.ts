@@ -22,9 +22,11 @@ import { Cash } from 'typechain/augur/Cash'
 
 use(solidity)
 
-describe.only('Exit for augur fee pot', function() {
+describe('Exit for augur fee pot', function() {
   const initialFeesAccumulated = 1e6
   const exitFee = 100 // 10%
+  const EthBob = EthWallets[0]
+  const MaticBob = MaticWallets[0]
   const EthAlice = EthWallets[1] // use 2nd wallet, first wallet is childChain for the test
   const MaticAlice = MaticWallets[1] // use 2nd wallet, first wallet is childChain for the test
   let exitTx: ContractReceipt
@@ -33,29 +35,33 @@ describe.only('Exit for augur fee pot', function() {
   let maticCash:TradingCash
   let cash:Cash
 
-  before(deployAndPrepareTrading)
-  before('Put some trading cash into Augur predicate', async function() {
-    maticCash = this.maticCash.contract.connect(MaticAlice)
-    cash = this.cash.contract.connect(EthAlice)
+  async function doDeploy() {
+    before(deployAndPrepareTrading)
+    before('Put some trading cash into Augur predicate', async function() {
+      maticCash = this.maticCash.contract.connect(MaticAlice)
+      cash = this.cash.contract.connect(EthAlice)
 
-    // switch child chain caller for the test
-    await this.maticCash.from.changeChildChain(MaticAlice.address)
-    // deposit fees to matic augur registry
-    await maticCash.deposit(this.augurRegistry.address, initialFeesAccumulated)
-    // and to augur predicate
-    await cash.faucet(initialFeesAccumulated)
+      // switch child chain caller for the test
+      await this.maticCash.from.changeChildChain(MaticAlice.address)
+      // deposit fees to matic augur registry
+      await maticCash.deposit(this.augurRegistry.address, initialFeesAccumulated)
+      // and to augur predicate
+      await cash.faucet(initialFeesAccumulated)
 
-    await cash.approve(this.augurPredicate.address, initialFeesAccumulated)
-    await this.augurPredicate.contract.connect(EthAlice).deposit(initialFeesAccumulated)
+      await cash.approve(this.augurPredicate.address, initialFeesAccumulated)
+      await this.augurPredicate.contract.connect(EthAlice).deposit(initialFeesAccumulated)
 
-    feePotPredicate = await connectedContract(ContractName.FeePotPredicate, 'augur-main')
-    await feePotPredicate.from.setExitorFee(exitFee)
-  })
+      feePotPredicate = await connectedContract(ContractName.FeePotPredicate, 'augur-main')
+      await feePotPredicate.from.setExitorFee(exitFee)
+    })
+  }
 
   describe('when Alice exits with 100% of fees accumulated', function() {
+    doDeploy()
+
     describe('burns fees on matic', function() {
       it('must withdraw', async function() {
-        const p = this.augurRegistry.contract.connect(MaticAlice).withdrawFees(initialFeesAccumulated)
+        const p = this.augurRegistry.contract.connect(MaticAlice).withdrawFees()
         await expect(p)
           .to.emit(this.maticCash.contract, 'Withdraw')
           .withArgs(this.oiCash.address, this.augurRegistry.address, initialFeesAccumulated, initialFeesAccumulated, 0)
@@ -108,7 +114,41 @@ describe.only('Exit for augur fee pot', function() {
           await this.cash.contract.balanceOf(
             await getAddress(ContractName.FeePot, 'augur-main')
           )
-        ).to.be.eq(900010)
+        ).to.be.eq(900010) // the rest of pot + fee from exitor's reward
+      })
+    })
+  })
+
+  describe('when fees burner is not the exitor', function() {
+    doDeploy()
+
+    describe('when Bob burns fees on sidechain', async function() {
+      it('must withdraw', async function() {
+        const p = this.augurRegistry.contract.connect(MaticBob).withdrawFees()
+
+        await expect(p)
+          .to.emit(this.maticCash.contract, 'Withdraw')
+          .withArgs(this.oiCash.address, this.augurRegistry.address, initialFeesAccumulated, initialFeesAccumulated, 0)
+
+        exitTx = await (await p).wait(0)
+      })
+    })
+
+    describe('when Alice starts exit on rootchain', async function() {
+      before(async function() {
+        exitPayload = await this.checkpointHelper.submitCheckpoint(VALIDATORS, exitTx.transactionHash, EthAlice.address)
+        exitPayload.logIndex = indexOfEvent({
+          logs: exitTx.logs,
+          contractType: 'augur-matic',
+          contractName: ContractName.TradingCash,
+          eventName: 'Withdraw'
+        })
+        // cashBalanceBeforeExit = await this.cash.contract.balanceOf(EthAlice.address)
+      })
+
+      it('must start exit', async function() {
+        await expect(feePotPredicate.contract.connect(EthAlice).startExitWithBurntFees(buildReferenceTxPayload(exitPayload)))
+          .to.emit(this.withdrawManager.contract, 'ExitStarted')
       })
     })
   })
