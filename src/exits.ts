@@ -5,10 +5,13 @@ import { Market } from 'typechain/augur/Market'
 import { DisputeWindow } from 'typechain/augur/DisputeWindow'
 import { createContract } from 'src/deployedContracts'
 import { ContractTransaction } from 'ethers'
+import { DEFAULT_GAS } from './constants'
 
 export async function processExits(this: Context, tokenAddress: string) :Promise<ContractTransaction> {
-  await increaseBlockTime.call(this, 14 * 86400)
-  return await this.withdrawManager.from.processExits(tokenAddress)
+  await increaseBlockTime.call(this, 15 * 86400)
+  return this.withdrawManager.from.processExits(tokenAddress, {
+    gasLimit: DEFAULT_GAS
+  })
 }
 
 export async function finalizeMarket(this: Context, market: Market) :Promise<void> {

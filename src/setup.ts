@@ -83,6 +83,7 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.maticZeroXExchange = await connectedContract(ContractName.ZeroXExchange, 'augur-matic')
 
   this.predicateRegistry = await connectedContract(ContractName.PredicateRegistry, 'augur-main')
+  this.depositManager = await connectedContract(ContractName.DepositManager, 'plasma')
 
   await this.cash.from.faucet(defaultCashAmount)
   await this.cash.other.faucet(defaultCashAmount)
@@ -92,41 +93,22 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await this.augurPredicate.from.deposit(defaultCashAmount)
   await syncDeposit(this.childChain.from, this.from, this.oiCash.address, defaultCashAmount)
 
-  let b = await this.maticCash.contract.balanceOf(this.from)
-  console.log('from balance', b.toString())
-
   await this.augurPredicate.other.deposit(defaultCashAmount)
   await syncDeposit(this.childChain.from, this.otherFrom, this.oiCash.address, defaultCashAmount)
 
-  b = await this.maticCash.contract.balanceOf(this.otherFrom)
-  console.log('otherFrom balance', b.toString())
-
-  await approveAllForCashAndShareTokens()
+  await approveAllForShareTokens()
 }
 
-export async function approveAllForCashAndShareTokens(): Promise<void> {
-  const cash = await connectedContract<Cash>(ContractName.TradingCash, 'augur-matic')
+export async function approveAllForShareTokens(): Promise<void> {
   const shareToken = await connectedContract<ShareToken>(ContractName.SideChainShareToken, 'augur-matic')
 
   const zeroXTradeAddr = await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic')
-  const augurAddr = await getAddress(ContractName.SideChainAugur, 'augur-matic')
   const createOrder = await getAddress(ContractName.CreateOrder, 'augur-matic')
   const fillOrder = await getAddress(ContractName.SideChainFillOrder, 'augur-matic')
-
-  // not sure which of these approvals are actually required
-  // cash.other.approve(zeroXTradeAddr, MAX_AMOUNT)
-  // cash.other.approve(augurAddr, MAX_AMOUNT)
-  // cash.other.approve(createOrder, MAX_AMOUNT)
-  // cash.other.approve(fillOrder, MAX_AMOUNT)
 
   shareToken.other.setApprovalForAll(zeroXTradeAddr, true)
   shareToken.other.setApprovalForAll(createOrder, true)
   shareToken.other.setApprovalForAll(fillOrder, true)
-
-  // cash.from.approve(zeroXTradeAddr, MAX_AMOUNT)
-  // cash.from.approve(augurAddr, MAX_AMOUNT)
-  // cash.from.approve(createOrder, MAX_AMOUNT)
-  // cash.from.approve(fillOrder, MAX_AMOUNT)
 
   shareToken.from.setApprovalForAll(zeroXTradeAddr, true)
   shareToken.from.setApprovalForAll(createOrder, true)

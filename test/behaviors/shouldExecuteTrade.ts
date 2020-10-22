@@ -3,7 +3,7 @@ import { AUGUR_FEE, ASK_ORDER } from 'src/constants'
 import { ContractName, Counterparty } from 'src/types'
 import { Order } from 'src/orders'
 import { assertTokenBalances } from 'src/assert'
-import { BigNumber, ContractReceipt } from "ethers"
+import { BigNumber, ContractReceipt } from 'ethers'
 import { MarketInfo } from 'src/setup'
 import { formatBytes32String, hexlify, hexValue } from 'ethers/lib/utils'
 import { getDeployed } from 'src/deployedContracts'
@@ -63,14 +63,12 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
 
     it('should trade', async function() {
       const { orders, signatures } = order
-      console.log('trade 1')
       const amountRemaining = await this.maticZeroXTrade
         .contract.connect(orderFiller.wallet)
         .callStatic.trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
       expect(amountRemaining).to.be.equal(fillAmount - orderAmount)
 
-      console.log('trade 2')
       const tradeTx = await this.maticZeroXTrade
         .contract.connect(orderFiller.wallet)
         .trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })

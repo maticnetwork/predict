@@ -8,7 +8,7 @@ import { EthWallets, MaticWallets } from 'src/wallets'
 import { ASK_ORDER, AUGUR_FEE, BID_ORDER, DEFAULT_GAS, DEFAULT_TRADE_GROUP, MATIC_CHAIN_ID, VALIDATORS, NO_OUTCOME, INVALID_OUTCOME } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload, buildChallengeData } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
+import { deployAndPrepareTrading, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
 
 import { indexOfEvent } from 'src/events'
 import { assertTokenBalances } from 'src/assert'

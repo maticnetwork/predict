@@ -22,7 +22,8 @@ export enum ContractName {
   Universe = 'Universe',
   Governance = 'Governance',
   Registry = 'Registry',
-  AugurPredicate = 'AugurPredicateTest',
+  AugurPredicate = 'AugurPredicate',
+  AugurPredicateMoreVPTest = 'AugurPredicateMoreVPTest',
   ShareTokenPredicate = 'ShareTokenPredicate',
   WithdrawManager = 'WithdrawManager',
   ERC20Predicate = 'ERC20Predicate',
@@ -30,7 +31,7 @@ export enum ContractName {
   ZeroXTrade = 'ZeroXTrade',
   ExitZeroXTrade = 'ExitZeroXTrade',
   ZeroXExchange = 'Exchange',
-  Cash = 'Cash',
+  Cash = 'USDT',
   ShareToken = 'ShareToken',
   TestToken = 'TestToken',
   StakeManager = 'StakeManager',
@@ -56,7 +57,8 @@ export enum ContractName {
   SideChainFillOrder = 'SideChainFillOrder',
   SideChainShareToken = 'SideChainShareToken',
   SideChainAugurTrading = 'SideChainAugurTrading',
-  TradeLib = 'TradeLib'
+  FeePotPredicate = 'FeePotPredicate',
+  FeePot = 'FeePot'
 }
 
 export function toBN(value: any): BigNumber {

@@ -8,13 +8,15 @@ import { ContractName } from 'src/types'
 import { execShellCommand } from 'src/execShellCommand'
 import { deployContract } from 'ethereum-waffle'
 import { EthProvider } from 'src/providers'
-import { EthWallets, MaticWallets } from 'src/wallets'
+import { EthWallets, MaticWallets, OWNER_PK } from 'src/wallets'
 import { utils } from 'ethers'
 
 import TradingCashArtifact from 'artifacts/augur/TradingCash.json'
 import PredicateRegistryArtifact from 'artifacts/augur/PredicateRegistry.json'
 import ExitCashFactoryArtifact from 'artifacts/augur/ExitCashFactory.json'
 import ExitShareTokenFactory from 'artifacts/augur/ExitShareTokenFactory.json'
+import AugurRegistryArtifact from 'artifacts/augur/AugurRegistry.json'
+
 import { PredicateRegistry } from 'typechain/augur/PredicateRegistry'
 import { OiCash } from 'typechain/augur/OiCash'
 import { AugurSyncer } from 'typechain/augur/AugurSyncer'
@@ -24,33 +26,33 @@ import { TestToken } from 'typechain/core/TestToken'
 import { StakeManager } from 'typechain/core/StakeManager'
 import { AugurPredicate } from 'typechain/augur/AugurPredicate'
 import { DEFAULT_GAS } from './constants'
-import { MarketRegistry } from 'typechain/augur/MarketRegistry'
 import { ChildChain } from 'typechain/core/ChildChain'
 import { TradingCash } from 'typechain/augur/TradingCash'
 import { ExitZeroXTrade } from 'typechain/augur/ExitZeroXTrade'
 import { Exchange } from 'typechain/augur/Exchange'
 import { AugurRegistry } from 'typechain/augur/AugurRegistry'
-import { SideChainFillOrder } from 'typechain/augur/SideChainFillOrder'
-import { SideChainAugur } from 'typechain/augur/SideChainAugur'
-import { formatBytes32String } from 'ethers/lib/utils'
+import { FeePotPredicate } from 'typechain/augur/FeePotPredicate'
 
 const OUTPUT_DIR = 'output'
+const PREDICATE_CUSTOM = 3
 
 const PredicateAddresses = 'addresses.predicate.json'
 const AugurMaticAddresses = 'addresses.augur-matic.json'
-const AugurSidechainAddresses = 'addresses.augur-sidechain.json'
-
+const AugurMainAddresses = 'addresses.augur-main.json'
+const CWD = process.cwd()
 const owner = EthProvider.getSigner(0)
 
-function extracAddresses(filename: string, output:string) {
-  const contracts: {[key:string]: string} = { }
+function extractAddresses(filename: string) {
+  let contracts: {[key:string]: string} = { }
 
   try {
-    fs.readFileSync(`${join(OUTPUT_DIR, filename)}`).toString().trim().split(/\n/g).forEach(l => {
+    fs.readFileSync(`${join(CWD, OUTPUT_DIR, filename)}`).toString().trim().split(/\n/g).forEach(l => {
       let key = ''
       let address = ''
 
-      if (l.indexOf('Uploaded contract: ') !== -1) {
+      if (l.indexOf('addresses ') !== -1) {
+        contracts = JSON.parse(l.slice('addresses '.length))
+      } else if (l.indexOf('Uploaded contract: ') !== -1) {
         l = l.slice('Uploaded contract: '.length)
         key = l.slice(0, l.indexOf(':'))
         l = l.slice(l.indexOf(':') + 3)
@@ -66,11 +68,29 @@ function extracAddresses(filename: string, output:string) {
         contracts[key] = address
       }
     })
-
-    fs.writeFileSync(`${join(OUTPUT_DIR, output)}`, JSON.stringify(contracts, null, 2))
   } catch (e) {
-    console.log(e)
+    console.error(e)
   }
+
+  return contracts
+}
+
+function saveTo(contracts: any, out: string) {
+  fs.writeFileSync(`${join(OUTPUT_DIR, out)}`, JSON.stringify(contracts, null, 2))
+}
+
+function merge(obj1: any, obj2: any) {
+  const contracts: {[key:string]: string} = { }
+
+  for (const k in obj1) {
+    contracts[k] = obj1[k]
+  }
+
+  for (const k in obj2) {
+    contracts[k] = obj2[k]
+  }
+
+  return contracts
 }
 
 export async function deployAll(): Promise<void> {
@@ -81,52 +101,62 @@ export async function deployAll(): Promise<void> {
   await execShellCommand('mv core-contracts/addresses.root.json output/addresses.plasma.json')
   await execShellCommand('mv core-contracts/addresses.child.json output/addresses.matic.json')
 
-  // await execShellCommand(`yarn --cwd "augur/packages/augur-core" deploy:local > ${join(OUTPUT_DIR, 'deploy.main')}`)
-
-  // process.chdir('augur-sidechain/packages/augur-core')
-  // console.log('deploying main')
-  // await execShellCommand(`bash src/support/deploy/run.sh direct test > ${join('../../../', OUTPUT_DIR, 'deploy.main')}`)
-  // console.log('deploying matic')
-  // await execShellCommand(`bash src/support/deploy/run.sh direct matic > ${join('../../../', OUTPUT_DIR, 'deploy.matic')}`)
-  // process.chdir('../../../')
-
   process.chdir('predicate/packages/augur-core')
-  await execShellCommand(`bash src/support/deploy/run.sh direct matic > ${join('../../../', OUTPUT_DIR, 'deploy.matic')}`)
-  await execShellCommand(`bash src/support/deploy/run.sh direct test > ${join('../../../', OUTPUT_DIR, 'deploy.main')}`)
-  process.chdir('../../../')
+  await execShellCommand(`ETHEREUM_PRIVATE_KEY=${OWNER_PK} bash src/support/deploy/run.sh direct matic > ${join('../../../', OUTPUT_DIR, 'deploy.matic')}`)
+  await execShellCommand(`ETHEREUM_PRIVATE_KEY=${OWNER_PK} bash src/support/deploy/run.sh direct test > ${join('../../../', OUTPUT_DIR, 'deploy.main')}`)
 
-  extracAddresses('deploy.main', 'addresses.augur-main.json')
-  extracAddresses('deploy.matic', AugurMaticAddresses)
-  // extracAddresses('deploy.predicate', PredicateAddresses)
+  // deploy para contracts
+  // 1st deploy para factory
+  process.chdir('../../')
+  await execShellCommand(
+    `ADDRESSES='${JSON.stringify(extractAddresses('deploy.main'))}' ETHEREUM_PRIVATE_KEY=${OWNER_PK} yarn flash deploy-para-augur-factory --network=local > ${join('..', OUTPUT_DIR, 'deploy.para.factory')}`
+  )
+  const mergedAddr = merge(extractAddresses('deploy.main'), extractAddresses('deploy.para.factory'))
+  const USDT = extractAddresses('deploy.main').USDT
+  await execShellCommand(
+    `ADDRESSES='${JSON.stringify(mergedAddr)}' ETHEREUM_PRIVATE_KEY=${OWNER_PK} yarn flash deploy-para-augur -c ${USDT} > ${join('..', OUTPUT_DIR, 'deploy.para')}`
+  )
+  process.chdir('..')
+
+  // merge para and main augur
+  saveTo(
+    merge(extractAddresses('deploy.main'), extractAddresses('deploy.para')),
+    AugurMainAddresses
+  )
+  saveTo(extractAddresses('deploy.matic'), AugurMaticAddresses)
 
   const cashAddr = await deployCash()
+  const augurRegistryAddr = await deployAugurRegistry(cashAddr)
 
   // collect necessary addresses and pass it to sidechain augur deployer
   const maticAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, AugurMaticAddresses)).toString())
+  maticAddresses.AugurRegistry = augurRegistryAddr
   maticAddresses.Cash = cashAddr
   maticAddresses.TradingCash = cashAddr
   maticAddresses.MarketGetter = maticAddresses.AugurRegistry
 
   process.chdir('predicate/packages/augur-core')
-  await execShellCommand(`ADDRESSES='${JSON.stringify(maticAddresses)}' bash src/support/deploySideChain/run.sh direct matic > ${join('../../../', OUTPUT_DIR, 'deploy.sidechain')}`)
+  await execShellCommand(
+    `ADDRESSES='${JSON.stringify(maticAddresses)}' ETHEREUM_PRIVATE_KEY=${OWNER_PK} bash src/support/deploySideChain/run.sh direct matic > ${join('../../../', OUTPUT_DIR, 'deploy.sidechain')}`
+  )
   process.chdir('../../../')
 
   // merge sidechain and augur matic addresses
-  extracAddresses('deploy.sidechain', AugurSidechainAddresses)
-  const sidechainAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, AugurSidechainAddresses)).toString())
-  for (const contractName in sidechainAddresses) {
-    maticAddresses[contractName] = sidechainAddresses[contractName]
-  }
-  fs.writeFileSync(`${join(OUTPUT_DIR, AugurMaticAddresses)}`, JSON.stringify(maticAddresses, null, 2))
+  saveTo(
+    merge(maticAddresses, extractAddresses('deploy.sidechain')),
+    AugurMaticAddresses
+  )
 
+  // deploy and initialize the rest
   const predicateRegistry = await deployAugurPredicate()
+  // TODO remove unncessary fields in predicate registry
   await initializeAugurPredicate(predicateRegistry)
+  await initializeFeePotPredicate()
   await prepareRootChainForTesting()
 }
 
 async function deployAugurPredicate(): Promise<PredicateRegistry> {
   const predicateRegistry:PredicateRegistry = await deployContract(owner, PredicateRegistryArtifact) as PredicateRegistry
-  console.log(await predicateRegistry.defaultExchange())
   // write addresses to predicate addresses file
   const predicateAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, PredicateAddresses)).toString())
   predicateAddresses.PredicateRegistry = predicateRegistry.address
@@ -145,6 +175,30 @@ async function deployCash() {
   return tradingCash.address
 }
 
+async function deployAugurRegistry(cashAddr: string) {
+  const maticOwner = MaticWallets[0]
+  const contract = await deployContract(maticOwner, AugurRegistryArtifact, [cashAddr])
+  return contract.address
+}
+
+async function initializeFeePotPredicate() {
+  const Governance = await getDeployed(ContractName.Governance, 'plasma') as Governance
+  const plasmaRegistry = await getDeployed(ContractName.Registry, 'plasma') as Registry
+  const feePotPredicate = await getDeployed(ContractName.FeePotPredicate, 'augur-main') as FeePotPredicate
+
+  await feePotPredicate.connect(owner).initialize(
+    await getAddress(ContractName.WithdrawManager, 'plasma'),
+    await getAddress(ContractName.ERC20Predicate, 'plasma'),
+    await getAddress(ContractName.AugurRegistry, 'augur-matic'), // child fee pot is augur registry
+    await getAddress(ContractName.AugurPredicate, 'augur-main')
+  )
+
+  await Governance.connect(owner).update(
+    plasmaRegistry.address,
+    plasmaRegistry.interface.encodeFunctionData('addPredicate', [feePotPredicate.address, PREDICATE_CUSTOM])
+  )
+}
+
 async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Promise<void> {
   predicateRegistry = predicateRegistry.connect(owner)
 
@@ -155,7 +209,6 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   const ZeroXExchange = await getDeployed(ContractName.ZeroXExchange, 'augur-main') as Exchange
 
   const maticExchangeAddr = await getAddress(ContractName.ZeroXExchange, 'augur-matic')
-  await predicateRegistry.defaultExchange()
   await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic'))
   await predicateRegistry.setRootZeroXTrade(maticExchangeAddr)
 
@@ -165,9 +218,6 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   const tradingCashAddr = tradingCash.address
   await predicateRegistry.setCash(tradingCashAddr) // set it as cash
   await predicateRegistry.setShareToken(await getAddress(ContractName.ShareToken, 'augur-matic'))
-
-  console.log('rootOICash.address', rootOICash.address)
-  console.log('tradingCashAddr', tradingCashAddr)
 
   // map OICash -> TradingToken
   await Governance.connect(owner).update(
@@ -186,11 +236,11 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   ) {
     await Governance.connect(owner).update(
       plasmaRegistry.address,
-      plasmaRegistry.interface.encodeFunctionData('addPredicate', [AugurPredicate.address, 3])
+      plasmaRegistry.interface.encodeFunctionData('addPredicate', [AugurPredicate.address, PREDICATE_CUSTOM])
     )
   }
 
-  assert.equal(await plasmaRegistry.predicates(AugurPredicate.address), 3)
+  assert.strictEqual(await plasmaRegistry.predicates(AugurPredicate.address), PREDICATE_CUSTOM)
 
   const ShareTokenPredicate = await getDeployed(ContractName.ShareTokenPredicate, 'augur-main')
   const WithdrawManagerProxyAddr = await getAddress(ContractName.WithdrawManager, 'plasma')
@@ -216,12 +266,14 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
     WithdrawManagerProxyAddr,
     ERC20PredicateAddr,
     rootOICash.address,
+    await getAddress(ContractName.Cash, 'augur-main'),
     AugurAddr,
     ShareTokenPredicate.address,
     RegistryAddr,
     exitShareTokenFactory.address,
     exitCashFactory.address,
-    await getAddress(ContractName.DepositManager, 'plasma')
+    await getAddress(ContractName.DepositManager, 'plasma'),
+    await getAddress(ContractName.FeePot, 'augur-main')
   )
 
   assert.strictEqual(await AugurPredicate.predicateRegistry(), predicateRegistry.address)
@@ -229,14 +281,6 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
 
   // TODO make part of initialize
   await ZeroXTrade.connect(owner).initializeForMatic(await getAddress(ContractName.ZeroXTrade, 'augur-matic'))
-
-  // console.log('2')
-  // assert.strictEqual(await ZeroXTrade.registry(), predicateRegistry.address)
-
-  // await ZeroXExchange.connect(owner).setRegistry(predicateRegistry.address)
-
-  console.log('3')
-  // assert.strictEqual(await ZeroXExchange.registry(), predicateRegistry.address)
 
   const augurSyncer = await connectedContract<AugurSyncer>(ContractName.AugurSyncer, 'augur-main')
   await augurSyncer.from.setRegistry(RegistryAddr)
@@ -255,13 +299,13 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   await childChain.connect(maticFrom).mapToken(rootOICash.address, tradingCashAddr, false)
 
   // whitelist TradingCash spenders
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainFillOrder, 'augur-matic'), true)
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainAugurTrading, 'augur-matic'), true)
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainAugur, 'augur-matic'), true)
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainShareToken, 'augur-matic'), true)
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic'), true)
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.Exchange, 'augur-matic'), true)
-  await tradingCash.from.setWhitelistSpender(await getAddress(ContractName.CreateOrder, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainFillOrder, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainAugurTrading, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainAugur, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainShareToken, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.Exchange, 'augur-matic'), true)
+  await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.CreateOrder, 'augur-matic'), true)
 }
 
 async function prepareRootChainForTesting() {

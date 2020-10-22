@@ -22,6 +22,7 @@ import { TradingCash } from 'typechain/augur/TradingCash'
 import { ChildChain } from 'typechain/core/ChildChain'
 import { AugurRegistry } from 'typechain/augur/AugurRegistry'
 import { SideChainShareToken } from 'typechain/augur/SideChainShareToken'
+import { DepositManager } from 'typechain/core/DepositManager'
 
 declare module 'mocha' {
   interface Context {
@@ -42,6 +43,7 @@ declare module 'mocha' {
     checkpointHelper: CheckpointHelper;
     predicateRegistry: ConnectedPredicateRegistry;
     withdrawManager: ConnectedWithdrawManager;
+    depositManager: ConnectedContract<DepositManager>;
     childChain: ConnectedContract<ChildChain>;
     augurRegistry: ConnectedContract<AugurRegistry>;
     from: string;

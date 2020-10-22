@@ -8,16 +8,13 @@ import { EthWallets, MaticWallets } from 'src/wallets'
 import { DEFAULT_TRADE_GROUP, BID_ORDER, VALIDATORS, NO_OUTCOME } from 'src/constants'
 import { createOrder } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
-import { deployAndPrepareTrading, approveAllForCashAndShareTokens, MarketInfo, createMarket } from 'src/setup'
+import { deployAndPrepareTrading, MarketInfo, createMarket } from 'src/setup'
 
 import { findEvents, indexOfEvent } from 'src/events'
 import { processExits } from 'src/exits'
 
 import { shouldExecuteTrade, TradeReturnValues } from '../behaviors/shouldExecuteTrade'
 import { Context } from 'mocha'
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Web3EthAbi = require('web3-eth-abi')
 
 use(solidity)
 
@@ -53,11 +50,14 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
 
       it('must start exit', async function() {
         const promise = this.augurPredicate.contract.connect(wallet).startExitWithBurntTokens(buildReferenceTxPayload(exitPayload))
-        await expect(promise).to.emit(this.withdrawManager.contract, 'ExitStarted')
+        await expect(promise)
+          .to.emit(this.withdrawManager.contract, 'ExitStarted')
       })
 
       it('must process exits', async function() {
-        await processExits.call(this, this.oiCash.address)
+        await expect(processExits.call(this, this.oiCash.address))
+          .to.emit(this.withdrawManager.contract, 'Withdraw')
+          .to.emit(this.augurPredicate.contract, 'ExitFinalized')
       })
 
       it('cash balance must be reflected on ethereum', async function() {
@@ -75,7 +75,7 @@ function shouldExitWithBurntCash(wallet: Wallet, maticWallet: Wallet, name: stri
   })
 }
 
-describe.only('Exit with burnt cash', function() {
+describe('Exit with burnt cash', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
