@@ -54,34 +54,24 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
 
   this.from = from.address
   this.otherFrom = otherFrom.address
-
   this.childChain = await connectedContract(ContractName.ChildChain, 'matic')
   this.augurRegistry = await connectedContract(ContractName.AugurRegistry, 'augur-matic')
-
   this.rootChain = await getDeployed(ContractName.RootChain, 'plasma')
   this.withdrawManager = await connectedContract(ContractName.WithdrawManager, 'plasma')
-
   this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
-
   this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'augur-main')
   this.oiCash = await connectedContract(ContractName.OICash, 'augur-main')
   this.maticOICash = await connectedContract(ContractName.OICash, 'augur-matic')
-
   this.cash = await connectedContract(ContractName.Cash, 'augur-main')
   this.maticCash = await connectedContract(ContractName.TradingCash, 'augur-matic')
-
   this.time = await connectedContract(ContractName.Time, 'augur-main')
   this.maticTime = await connectedContract(ContractName.Time, 'augur-matic')
-
   this.augur = await connectedContract(ContractName.Augur, 'augur-main')
   this.maticAugur = await connectedContract(ContractName.Augur, 'augur-matic')
-
   this.shareToken = await connectedContract(ContractName.ShareToken, 'augur-main')
   this.maticShareToken = await connectedContract(ContractName.SideChainShareToken, 'augur-matic')
-
   this.maticZeroXTrade = await connectedContract(ContractName.SideChainZeroXTrade, 'augur-matic')
   this.maticZeroXExchange = await connectedContract(ContractName.ZeroXExchange, 'augur-matic')
-
   this.predicateRegistry = await connectedContract(ContractName.PredicateRegistry, 'augur-main')
   this.depositManager = await connectedContract(ContractName.DepositManager, 'plasma')
 
@@ -92,9 +82,13 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
 
   await this.augurPredicate.from.deposit(defaultCashAmount)
   await syncDeposit(this.childChain.from, this.from, this.oiCash.address, defaultCashAmount)
-
   await this.augurPredicate.other.deposit(defaultCashAmount)
   await syncDeposit(this.childChain.from, this.otherFrom, this.oiCash.address, defaultCashAmount)
+
+  // mint some DAI for the market creation
+  const dai = await connectedContract<Cash>(ContractName.DAI, 'augur-main')
+  await dai.from.faucet(defaultCashAmount)
+  await dai.other.faucet(defaultCashAmount)
 
   await approveAllForShareTokens()
 }

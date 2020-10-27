@@ -1,19 +1,37 @@
 import { Contract, Signer } from 'ethers'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { ParaUniverse } from 'typechain/augur/ParaUniverse'
 import { Universe } from 'typechain/augur/Universe'
 import { ContractName, ContractType } from 'src/types'
 import { getProvider } from 'src/providers'
 
 export async function getAddress(contractName: ContractName, type: ContractType): Promise<string> {
-  let contractAddress: string
+  let contractAddress = ''
   if (contractName === ContractName.OICash) {
-    const universe = await getDeployed(ContractName.Universe, type) as Universe
-    contractAddress = await universe.openInterestCash()
+    if (type === 'augur-main') {
+      const universe = await getDeployed(ContractName.ParaUniverse, type) as ParaUniverse
+      contractAddress = await universe.openInterestCash()
+    } else {
+      const universe = await getDeployed(ContractName.Universe, type) as Universe
+      contractAddress = await universe.openInterestCash()
+    }
   } else if (contractName === ContractName.TestNetReputationToken) {
-    const universe = await getDeployed(ContractName.Universe, type) as Universe
-    contractAddress = await universe.getReputationToken()
-  } else {
+    if (type === 'augur-main') {
+      const universe = await getDeployed(ContractName.ParaUniverse, type) as ParaUniverse
+      contractAddress = await universe.getReputationToken()
+    } else {
+      const universe = await getDeployed(ContractName.Universe, type) as Universe
+      contractAddress = await universe.getReputationToken()
+    }
+  } else if (contractName === ContractName.Universe) {
+    if (type === 'augur-main') {
+      const universe = await getDeployed(ContractName.ParaUniverse, type) as ParaUniverse
+      contractAddress = await universe.originUniverse()
+    }
+  }
+
+  if (!contractAddress) {
     const addresses = JSON.parse(readFileSync(`output/addresses.${type}.json`).toString())
     contractAddress = addresses[contractName]
   }
@@ -34,6 +52,11 @@ export function getAbi(contractName: ContractName, type: ContractType): any {
     case 'augur-matic':
       artifactPath = 'artifacts/augur'
       break
+  }
+
+  // dirty hack, swap to Cash abi in case of DAI
+  if (contractName === ContractName.DAI) {
+    contractName = ContractName.Cash
   }
 
   const jsonFile = readFileSync(join(artifactPath, `${contractName}.json`)).toString()

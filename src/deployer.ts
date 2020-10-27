@@ -32,6 +32,8 @@ import { ExitZeroXTrade } from 'typechain/augur/ExitZeroXTrade'
 import { Exchange } from 'typechain/augur/Exchange'
 import { AugurRegistry } from 'typechain/augur/AugurRegistry'
 import { FeePotPredicate } from 'typechain/augur/FeePotPredicate'
+import { Augur } from 'typechain/augur/Augur'
+import { formatBytes32String } from 'ethers/lib/utils'
 
 const OUTPUT_DIR = 'output'
 const PREDICATE_CUSTOM = 3
@@ -40,7 +42,11 @@ const PredicateAddresses = 'addresses.predicate.json'
 const AugurMaticAddresses = 'addresses.augur-matic.json'
 const AugurMainAddresses = 'addresses.augur-main.json'
 const CWD = process.cwd()
-const owner = EthProvider.getSigner(0)
+const owner = EthWallets[0]
+
+function stringTo32ByteHex(stringToEncode: string): string {
+  return `0x${Buffer.from(stringToEncode, 'utf8').toString('hex').padEnd(64, '0')}`
+}
 
 function extractAddresses(filename: string) {
   let contracts: {[key:string]: string} = { }
@@ -79,15 +85,18 @@ function saveTo(contracts: any, out: string) {
   fs.writeFileSync(`${join(OUTPUT_DIR, out)}`, JSON.stringify(contracts, null, 2))
 }
 
-function merge(obj1: any, obj2: any) {
+function merge(base: any, overrideOrMerge: any, doNotMerge: {[key:string]: any} = {}) {
   const contracts: {[key:string]: string} = { }
 
-  for (const k in obj1) {
-    contracts[k] = obj1[k]
+  for (const k in base) {
+    contracts[k] = base[k]
   }
 
-  for (const k in obj2) {
-    contracts[k] = obj2[k]
+  for (const k in overrideOrMerge) {
+    if (doNotMerge[k] && contracts[k]) {
+      continue
+    }
+    contracts[k] = overrideOrMerge[k]
   }
 
   return contracts
@@ -111,16 +120,24 @@ export async function deployAll(): Promise<void> {
   await execShellCommand(
     `ADDRESSES='${JSON.stringify(extractAddresses('deploy.main'))}' ETHEREUM_PRIVATE_KEY=${OWNER_PK} yarn flash deploy-para-augur-factory --network=local > ${join('..', OUTPUT_DIR, 'deploy.para.factory')}`
   )
+
   const mergedAddr = merge(extractAddresses('deploy.main'), extractAddresses('deploy.para.factory'))
-  const USDT = extractAddresses('deploy.main').USDT
   await execShellCommand(
-    `ADDRESSES='${JSON.stringify(mergedAddr)}' ETHEREUM_PRIVATE_KEY=${OWNER_PK} yarn flash deploy-para-augur -c ${USDT} > ${join('..', OUTPUT_DIR, 'deploy.para')}`
+    `ADDRESSES='${JSON.stringify(mergedAddr)}' ETHEREUM_PRIVATE_KEY=${OWNER_PK} yarn flash deploy-para-augur -c ${mergedAddr.USDT} > ${join('..', OUTPUT_DIR, 'deploy.para')}`
   )
   process.chdir('..')
 
   // merge para and main augur
+  // save Cash address - DAI
+  // save Universe into ParaUniverse
+  const mainAugurAddresses = extractAddresses('deploy.main')
+  const paraAugurAddresses = extractAddresses('deploy.para')
+  mainAugurAddresses.DAI = mainAugurAddresses.Cash
+  mainAugurAddresses.ParaUniverse = paraAugurAddresses.Universe
   saveTo(
-    merge(extractAddresses('deploy.main'), extractAddresses('deploy.para')),
+    merge(mainAugurAddresses, paraAugurAddresses, {
+      Universe: true
+    }),
     AugurMainAddresses
   )
   saveTo(extractAddresses('deploy.matic'), AugurMaticAddresses)
@@ -260,7 +277,6 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   const exitShareTokenFactory = await deployContract(owner, ExitShareTokenFactory, [], {
     gasLimit: DEFAULT_GAS
   })
-
   await AugurPredicate.connect(owner).initializeForMatic(
     predicateRegistry.address,
     WithdrawManagerProxyAddr,
@@ -290,14 +306,12 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   // deploy Market registry on matic
   const marketRegistry = (await getDeployed(ContractName.AugurRegistry, 'augur-matic')) as AugurRegistry
   await marketRegistry.connect(maticFrom).changeStateSyncerAddress(maticFrom.address)
-
   await augurSyncer.from.setMarketRegistry(marketRegistry.address)
 
   // map IOCash -> TradingCash and change syncer for testing purposes
   const childChain: ChildChain = await getDeployed(ContractName.ChildChain, 'matic')
   await childChain.connect(maticFrom).changeStateSyncerAddress(maticFrom.address)
   await childChain.connect(maticFrom).mapToken(rootOICash.address, tradingCashAddr, false)
-
   // whitelist TradingCash spenders
   await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainFillOrder, 'augur-matic'), true)
   await tradingCash.from.setWhitelistedSpender(await getAddress(ContractName.SideChainAugurTrading, 'augur-matic'), true)

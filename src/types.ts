@@ -58,7 +58,10 @@ export enum ContractName {
   SideChainShareToken = 'SideChainShareToken',
   SideChainAugurTrading = 'SideChainAugurTrading',
   FeePotPredicate = 'FeePotPredicate',
-  FeePot = 'FeePot'
+  FeePot = 'FeePot',
+  ParaAugur = 'ParaAugur',
+  ParaUniverse = 'ParaUniverse',
+  DAI = 'DAI'
 }
 
 export function toBN(value: any): BigNumber {
