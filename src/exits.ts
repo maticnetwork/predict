@@ -5,7 +5,7 @@ import { Market } from 'typechain/augur/Market'
 import { DisputeWindow } from 'typechain/augur/DisputeWindow'
 import { createContract } from 'src/deployedContracts'
 import { ContractTransaction } from 'ethers'
-import { DEFAULT_GAS } from './constants'
+import { DEFAULT_GAS, DEFAULT_NUM_TICKS } from './constants'
 
 export async function processExits(this: Context, tokenAddress: string) :Promise<ContractTransaction> {
   await increaseBlockTime.call(this, 15 * 86400)
@@ -14,10 +14,22 @@ export async function processExits(this: Context, tokenAddress: string) :Promise
   })
 }
 
-export async function finalizeMarket(this: Context, market: Market) :Promise<void> {
+export async function finalizeMarket(this: Context, market: Market, outcome: number) :Promise<void> {
   const endTime = await market.getEndTime()
   await this.time.from.setTimestamp(endTime.add(1))
-  await market.doInitialReport([0, 100, 0], '', 0)
+
+  const numerators = []
+  const numTicks = await market.getNumTicks()
+  const totalNumerators = await market.getNumberOfOutcomes()
+  for (let i = 0; i < totalNumerators.toNumber(); ++i) {
+    if (i === outcome) {
+      numerators.push(numTicks.toNumber())
+    } else {
+      numerators.push(0)
+    }
+  }
+
+  await market.doInitialReport(numerators, '', 0)
   // set timestamp to after designated dispute end
   const disputeWindow: DisputeWindow = createContract(await market.getDisputeWindow(), ContractName.DisputeWindow, 'augur-main')
   const disputeEndTime = await disputeWindow.getEndTime()

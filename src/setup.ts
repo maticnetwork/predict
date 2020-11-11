@@ -47,7 +47,7 @@ export async function createMarket(this: Context): Promise<MarketInfo> {
 }
 
 const [from, otherFrom] = EthWallets
-const defaultCashAmount = parseEther('1000')
+const defaultCashAmount = parseEther('100000000')
 
 export async function deployAndPrepareTrading(this: Context): Promise<void> {
   await deployAll()

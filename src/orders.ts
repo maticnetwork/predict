@@ -1,14 +1,8 @@
 import { BigNumberish, BytesLike, constants, Wallet } from 'ethers'
 import { Context } from 'mocha'
-import { ContractName, ContractType } from 'src/types'
+import { ContractType } from 'src/types'
 import { toBuffer, bufferToHex } from 'ethereumjs-util'
 import { sign0x } from './utils'
-import { NULL_ADDRESS } from './constants'
-import { assertTokenBalances } from './assert'
-import { getDeployed } from './deployedContracts'
-import { MarketRegistry } from 'typechain/augur/MarketRegistry'
-import { AugurRegistry } from 'typechain/augur/AugurRegistry'
-import { SideChainFillOrder } from 'typechain/augur/SideChainFillOrder'
 
 export interface OrderRequest {
   price: number;
@@ -16,7 +10,7 @@ export interface OrderRequest {
   direction: number;
   currentTime: number;
   marketAddress: string;
-  amount: number;
+  amount: BigNumberish;
 }
 
 export interface Order {
@@ -56,12 +50,8 @@ export async function createOrder(this: Context, request: OrderRequest, contract
     '1'
   )
 
-  const fillOrder = await getDeployed(ContractName.SideChainFillOrder, 'augur-matic') as SideChainFillOrder
-  const c = await fillOrder.storedContracts()
-  console.log(c)
-
-  // append signature type byte "3"
-  // that is required by Augur's signature verification
+  // append signature Eth type byte "3"
+  // that is required by 0x signature verification
   const signature = bufferToHex(
     Buffer.concat(
       [

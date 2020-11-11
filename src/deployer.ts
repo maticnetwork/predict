@@ -14,7 +14,8 @@ import { utils } from 'ethers'
 import TradingCashArtifact from 'artifacts/augur/TradingCash.json'
 import PredicateRegistryArtifact from 'artifacts/augur/PredicateRegistry.json'
 import ExitCashFactoryArtifact from 'artifacts/augur/ExitCashFactory.json'
-import ExitShareTokenFactory from 'artifacts/augur/ExitShareTokenFactory.json'
+import ExitShareTokenFactoryArtifact from 'artifacts/augur/ExitShareTokenFactory.json'
+import ExitExchangeArtifact from 'artifacts/augur/ExitExchange.json'
 import AugurRegistryArtifact from 'artifacts/augur/AugurRegistry.json'
 
 import { PredicateRegistry } from 'typechain/augur/PredicateRegistry'
@@ -25,7 +26,7 @@ import { Registry } from 'typechain/core/Registry'
 import { TestToken } from 'typechain/core/TestToken'
 import { StakeManager } from 'typechain/core/StakeManager'
 import { AugurPredicate } from 'typechain/augur/AugurPredicate'
-import { DEFAULT_GAS } from './constants'
+import { DEFAULT_GAS, NULL_ADDRESS } from './constants'
 import { ChildChain } from 'typechain/core/ChildChain'
 import { TradingCash } from 'typechain/augur/TradingCash'
 import { ExitZeroXTrade } from 'typechain/augur/ExitZeroXTrade'
@@ -34,6 +35,8 @@ import { AugurRegistry } from 'typechain/augur/AugurRegistry'
 import { FeePotPredicate } from 'typechain/augur/FeePotPredicate'
 import { Augur } from 'typechain/augur/Augur'
 import { formatBytes32String } from 'ethers/lib/utils'
+import { SideChainZeroXTrade } from 'typechain/augur/SideChainZeroXTrade'
+import { ExitExchange } from 'typechain/augur/ExitExchange'
 
 const OUTPUT_DIR = 'output'
 const PREDICATE_CUSTOM = 3
@@ -127,6 +130,8 @@ export async function deployAll(): Promise<void> {
   )
   process.chdir('..')
 
+  const exitExchange = await deployExitExchange(extractAddresses('deploy.matic').Exchange, extractAddresses('deploy.main').ExitZeroXTrade)
+
   // merge para and main augur
   // save Cash address - DAI
   // save Universe into ParaUniverse
@@ -134,6 +139,7 @@ export async function deployAll(): Promise<void> {
   const paraAugurAddresses = extractAddresses('deploy.para')
   mainAugurAddresses.DAI = mainAugurAddresses.Cash
   mainAugurAddresses.ParaUniverse = paraAugurAddresses.Universe
+  mainAugurAddresses.ExitExchange = exitExchange.address
   saveTo(
     merge(mainAugurAddresses, paraAugurAddresses, {
       Universe: true
@@ -172,8 +178,16 @@ export async function deployAll(): Promise<void> {
   await prepareRootChainForTesting()
 }
 
+async function deployExitExchange(maticExchangeAddr: string, exitZeroXTradeAddr: string): Promise<ExitExchange> {
+  const networkId = await MaticWallets[0].getChainId() // use matic chain id
+  const contract = await deployContract(owner, ExitExchangeArtifact, [networkId, maticExchangeAddr, exitZeroXTradeAddr], {
+    gasLimit: DEFAULT_GAS
+  }) as ExitExchange
+  return contract
+}
+
 async function deployAugurPredicate(): Promise<PredicateRegistry> {
-  const predicateRegistry:PredicateRegistry = await deployContract(owner, PredicateRegistryArtifact) as PredicateRegistry
+  const predicateRegistry = await deployContract(owner, PredicateRegistryArtifact) as PredicateRegistry
   // write addresses to predicate addresses file
   const predicateAddresses = JSON.parse(fs.readFileSync(join(OUTPUT_DIR, PredicateAddresses)).toString())
   predicateAddresses.PredicateRegistry = predicateRegistry.address
@@ -222,14 +236,14 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   const rootOICash = await getDeployed(ContractName.OICash, 'augur-main') as OiCash
   const Governance = await getDeployed(ContractName.Governance, 'plasma') as Governance
   const plasmaRegistry = await getDeployed(ContractName.Registry, 'plasma') as Registry
-  const ZeroXTrade = await getDeployed(ContractName.ExitZeroXTrade, 'augur-main') as ExitZeroXTrade
-  const ZeroXExchange = await getDeployed(ContractName.ZeroXExchange, 'augur-main') as Exchange
+  const exitZeroXTrade = await getDeployed(ContractName.ExitZeroXTrade, 'augur-main') as ExitZeroXTrade
+  const zeroXExchange = await getDeployed(ContractName.ZeroXExchange, 'augur-main') as Exchange
 
   const maticExchangeAddr = await getAddress(ContractName.ZeroXExchange, 'augur-matic')
-  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.ZeroXTrade, 'augur-matic'))
-  await predicateRegistry.setRootZeroXTrade(maticExchangeAddr)
+  await predicateRegistry.setZeroXTrade(await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic'))
+  // await predicateRegistry.setRootZeroXTrade(maticExchangeAddr)
 
-  await predicateRegistry.setZeroXExchange(maticExchangeAddr, ZeroXExchange.address, true)
+  await predicateRegistry.setZeroXExchange(maticExchangeAddr, zeroXExchange.address, true)
 
   const tradingCash = await connectedContract<TradingCash>(ContractName.TradingCash, 'augur-matic')
   const tradingCashAddr = tradingCash.address
@@ -274,7 +288,7 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
     gasLimit: DEFAULT_GAS
   })
 
-  const exitShareTokenFactory = await deployContract(owner, ExitShareTokenFactory, [], {
+  const exitShareTokenFactory = await deployContract(owner, ExitShareTokenFactoryArtifact, [], {
     gasLimit: DEFAULT_GAS
   })
   await AugurPredicate.connect(owner).initializeForMatic(
@@ -296,7 +310,12 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   assert.strictEqual(await AugurPredicate.withdrawManager(), WithdrawManagerProxyAddr)
 
   // TODO make part of initialize
-  await ZeroXTrade.connect(owner).initializeForMatic(await getAddress(ContractName.ZeroXTrade, 'augur-matic'))
+  await exitZeroXTrade.connect(owner).initializeForMatic(
+    await getAddress(ContractName.SideChainZeroXTrade, 'augur-matic'),
+    await getAddress(ContractName.TradingCash, 'augur-matic'),
+    await getAddress(ContractName.SideChainShareToken, 'augur-matic'),
+    await getAddress(ContractName.ExitExchange, 'augur-main')
+  )
 
   const augurSyncer = await connectedContract<AugurSyncer>(ContractName.AugurSyncer, 'augur-main')
   await augurSyncer.from.setRegistry(RegistryAddr)

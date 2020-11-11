@@ -5,7 +5,7 @@ import { BigNumber, ContractReceipt } from 'ethers'
 import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { DEFAULT_TRADE_GROUP, BID_ORDER, ASK_ORDER, VALIDATORS, NO_OUTCOME } from 'src/constants'
+import { DEFAULT_TRADE_GROUP, BID_ORDER, ASK_ORDER, VALIDATORS, NO_OUTCOME, DEFAULT_RECOMMENDED_TRADE_INTERVAL } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
@@ -27,9 +27,9 @@ describe('AugurPredicate: Claim Cash Balance', function() {
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
 
-  const firstOrderAmount = 1000
-  const fillAmount = 1200
-  const firstOrderFilledAmount = Math.min(firstOrderAmount, fillAmount)
+  const firstOrderAmount = BigNumber.from(1000).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
+  const fillAmount = BigNumber.from(1200).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
+  const firstOrderFilledAmount = firstOrderAmount
 
   let bobExitCashBalanceBeforeExit: BigNumber
   let market: MarketInfo
@@ -172,7 +172,7 @@ describe('AugurPredicate: Claim Cash Balance', function() {
       orderFiller: { name: 'Bob', wallet: bobMatic },
       direction: ASK_ORDER,
       expectedExitShares: {
-        orderCreator: [0, firstOrderFilledAmount - secondOrderAmount, 0],
+        orderCreator: [0, firstOrderFilledAmount.sub(secondOrderAmount), 0],
         orderFiller: [0, secondOrderAmount, 0]
       },
       expectedCashDelta: {

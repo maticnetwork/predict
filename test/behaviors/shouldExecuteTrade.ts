@@ -3,7 +3,7 @@ import { AUGUR_FEE, ASK_ORDER } from 'src/constants'
 import { ContractName, Counterparty } from 'src/types'
 import { Order } from 'src/orders'
 import { assertTokenBalances } from 'src/assert'
-import { BigNumber, ContractReceipt } from 'ethers'
+import { BigNumber, BigNumberish, ContractReceipt } from 'ethers'
 import { MarketInfo } from 'src/setup'
 import { formatBytes32String, hexlify, hexValue } from 'ethers/lib/utils'
 import { getDeployed } from 'src/deployedContracts'
@@ -15,19 +15,19 @@ export interface TradeReturnValues {
 }
 
 export interface ExecuteOrderOptions {
-  orderAmount: number;
-  sharePrice: number;
+  orderAmount: BigNumber;
+  sharePrice: BigNumberish;
   tradeGroupId: string;
   orderCreator: Counterparty;
   orderFiller: Counterparty;
   direction: number;
-  fillAmount: number;
+  fillAmount: BigNumber;
   returnValues: TradeReturnValues;
   market: () => Promise<MarketInfo>;
   order: () => Promise<Order>
   expectedShares: {
-    orderCreator: number[],
-    orderFiller: number[]
+    orderCreator: BigNumberish[],
+    orderFiller: BigNumberish[]
   }
 }
 
@@ -48,7 +48,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
   let orderFillerInitialBalance: BigNumber
   let market: MarketInfo
   let order: Order
-  const filledAmount = Math.min(fillAmount, orderAmount)
+  const filledAmount = fillAmount.lt(orderAmount) ? fillAmount : orderAmount
 
   describe(`${orderFiller.name} fills ${direction === ASK_ORDER ? 'ask' : 'bid'} of ${orderCreator.name}`, function() {
     before('get market and order', async function() {
@@ -67,7 +67,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
         .contract.connect(orderFiller.wallet)
         .callStatic.trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
-      expect(amountRemaining).to.be.equal(fillAmount - orderAmount)
+      expect(amountRemaining).to.be.eq(fillAmount.sub(orderAmount))
 
       const tradeTx = await this.maticZeroXTrade
         .contract.connect(orderFiller.wallet)
@@ -83,7 +83,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
     it(`${orderCreator.name} must have correct cash balance`, async function() {
       expect(
         await this.maticCash.contract.balanceOf(orderCreator.wallet.address)
-      ).to.be.gte(orderCreatorInitialBalance.sub(filledAmount * sharePrice))
+      ).to.be.gte(orderCreatorInitialBalance.sub(filledAmount.mul(sharePrice)))
     })
 
     it(`${orderFiller.name} must have correct market balance outcome`, async function() {
@@ -93,7 +93,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
     it(`${orderFiller.name} must have correct cash balance`, async function() {
       expect(
         await this.maticCash.contract.balanceOf(orderFiller.wallet.address)
-      ).to.be.gte(orderFillerInitialBalance.sub(filledAmount * (market.numTicks - sharePrice)))
+      ).to.be.gte(orderFillerInitialBalance.sub(filledAmount.mul(BigNumber.from(market.numTicks).sub(sharePrice))))
     })
   })
 }

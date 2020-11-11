@@ -1,15 +1,17 @@
 import { expect } from 'chai'
 import { AUGUR_FEE, MATIC_CHAIN_ID, ASK_ORDER, DEFAULT_GAS, MAX_FEE, BID_ORDER } from 'src/constants'
-import { Counterparty } from 'src/types'
+import { ContractName, Counterparty } from 'src/types'
 import { assertTokenBalances } from 'src/assert'
 import { Order } from 'src/orders'
 import { BigNumber, BigNumberish } from 'ethers'
 import { MarketInfo } from 'src/setup'
 import { Cash } from 'typechain/augur/Cash'
 import { ShareToken } from 'typechain/augur/ShareToken'
+import { formatBytes32String } from 'ethers/lib/utils'
+import { findEvents } from 'src/events'
 
 export interface ExecuteCensoredOrderOptions {
-  orderAmount: number;
+  orderAmount: BigNumberish;
   tradeGroupId: string;
   direction: number;
   orderCreator: Counterparty;
@@ -19,8 +21,8 @@ export interface ExecuteCensoredOrderOptions {
   market: () => Promise<MarketInfo>;
   order: () => Promise<Order>;
   expectedExitShares: {
-    orderCreator: number[],
-    orderFiller: number[]
+    orderCreator: BigNumberish[],
+    orderFiller: BigNumberish[]
   },
   expectedCashDelta: {
     orderCreator: BigNumberish,
@@ -63,7 +65,15 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
         value: AUGUR_FEE,
         chainId: MATIC_CHAIN_ID,
         nonce: await orderFiller.wallet.getTransactionCount(),
-        data: this.maticZeroXTrade.contract.interface.encodeFunctionData('trade', [orderAmount, '0x0', tradeGroupId, 0, 100, orders, signatures])
+        data: this.maticZeroXTrade.contract.interface.encodeFunctionData('trade', [
+          orderAmount,
+          formatBytes32String('11'),
+          tradeGroupId,
+          0,
+          100,
+          orders,
+          signatures
+        ])
       }
 
       inFlightTrade = await orderFiller.wallet.signTransaction(txObj)
@@ -92,7 +102,7 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
     it(`${orderFiller.name} should have correct exit cash balance`, async function() {
       expect(
         await exitCash.balanceOf(orderFiller.wallet.address)
-      ).to.be.gte(fillerExitCashBalanceBeforeTrade.add(expectedCashDelta.orderFiller))
+      ).to.be.gte(fillerExitCashBalanceBeforeTrade.sub(expectedCashDelta.orderFiller))
     })
   })
 }

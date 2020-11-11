@@ -64,22 +64,9 @@ task(TASK_COMPILE, '', async function(_taskArgs, { config }, runSuper) {
   await execShellCommand('npm run --prefix "core-contracts" truffle:compile')
   await transformCoreArtifacts(config.paths.core, config.artifacts.core)
 
-  // process.chdir('augur/packages/augur-core')
-  // await execShellCommand('node -r ts-node/register source/deployment/compileContracts.ts')
-  // await extractAugurArtifacts(config.paths.augur)
-  // await extractAugurArtifacts(config.paths.augurMatic)
-
   process.chdir('predicate/packages/augur-core')
   await execShellCommand('node -r ts-node/register src/deployment/compileContracts.ts && mv output/contracts/contracts.json ../augur-artifacts/build')
   process.chdir('../../../')
 
   await extractAugurArtifacts(config.artifacts.augur, 'predicate/packages/augur-artifacts/build/contracts.json')
-
-  // process.chdir('../../../augur-sidechain/packages/augur-core')
-  // await execShellCommand('node -r ts-node/register src/deployment/compileContracts.ts')
-  // await extractAugurArtifacts(config.paths.augur, 'output/contracts/contracts.json')
-
-  // process.chdir('../../../augur-matic/packages/augur-core')
-  // await execShellCommand('node -r ts-node/register src/deployment/compileContracts.ts')
-  // await extractAugurArtifacts(config.paths.augurMatic, 'output/contracts/contracts.json')
 })

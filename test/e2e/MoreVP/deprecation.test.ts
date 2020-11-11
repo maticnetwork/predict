@@ -5,7 +5,7 @@ import { BigNumber, ContractReceipt } from 'ethers'
 import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { ASK_ORDER, AUGUR_FEE, BID_ORDER, DEFAULT_GAS, DEFAULT_TRADE_GROUP, MATIC_CHAIN_ID, VALIDATORS, NO_OUTCOME, INVALID_OUTCOME } from 'src/constants'
+import { ASK_ORDER, AUGUR_FEE, BID_ORDER, DEFAULT_GAS, DEFAULT_TRADE_GROUP, MATIC_CHAIN_ID, VALIDATORS, NO_OUTCOME, INVALID_OUTCOME, DEFAULT_RECOMMENDED_TRADE_INTERVAL } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { buildReferenceTxPayload, ExitPayload, buildChallengeData } from '@maticnetwork/plasma'
 import { deployAndPrepareTrading, initializeAugurPredicateExit, MarketInfo, createMarket } from 'src/setup'
@@ -28,9 +28,9 @@ describe('AugurPredicate: Deprecation', function() {
   const tradeGroupId = DEFAULT_TRADE_GROUP
   let secondOrder: Order
 
-  const firstOrderAmount = 1000
-  const fillAmount = 1200
-  const firstOrderFilledAmount = Math.min(firstOrderAmount, fillAmount)
+  const firstOrderAmount = BigNumber.from(1000).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
+  const fillAmount = BigNumber.from(1200).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
+  const firstOrderFilledAmount = firstOrderAmount
 
   const firstTradeResult: TradeReturnValues = { }
   let market: MarketInfo
@@ -180,7 +180,7 @@ describe('AugurPredicate: Deprecation', function() {
       orderFiller: { name: 'Bob', wallet: bobMatic },
       direction: ASK_ORDER,
       expectedExitShares: {
-        orderCreator: [0, firstOrderFilledAmount - secondOrderAmount, 0],
+        orderCreator: [0, firstOrderFilledAmount.sub(secondOrderAmount), 0],
         orderFiller: [firstOrderFilledAmount, secondOrderAmount, 0]
       },
       expectedCashDelta: {

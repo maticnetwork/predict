@@ -47,8 +47,6 @@ export async function syncMarketInfo(augurRegistry: AugurRegistry, market: Marke
     (await market.affiliateFeeDivisor()).toString()
   ])
 
-  console.log('createMarket', (await market.getNumTicks()).toString())
-
   await augurRegistry.onStateReceive(1,
     Web3EthAbi.encodeParameters([
       'uint256', 'bytes'

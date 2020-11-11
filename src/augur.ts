@@ -9,9 +9,7 @@ import { Market } from 'typechain/augur/Market'
 import { ParaUniverse } from 'typechain/augur/ParaUniverse'
 
 export async function deployReasonableYesNoMarket(universe: ConnectedUniverse, endTime: number): Promise<string> {
-  console.log(5)
   const marketAddress = await universe.from.callStatic.createYesNoMarket(endTime, 0, NULL_ADDRESS, 0, universe.fromAddress, '')
-  console.log(6)
   await universe.from.createYesNoMarket(endTime, 0, NULL_ADDRESS, 0, universe.fromAddress, '')
   return marketAddress
 }

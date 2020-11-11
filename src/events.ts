@@ -49,10 +49,7 @@ export function indexOfEvent(options: IndexOfEventOptions, evtArgs?: { [key: str
               }
 
               const value = evtArgs[argKey]
-
-              if (BigNumber.isBigNumber(value) && !BigNumber.from(logValue).eq(value)) {
-                checksPassed = false
-              } else if (value !== logValue) {
+              if (!BigNumber.from(logValue).eq(BigNumber.from(value))) {
                 checksPassed = false
               }
 

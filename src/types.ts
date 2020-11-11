@@ -14,6 +14,7 @@ import { ShareToken } from 'typechain/augur/ShareToken'
 import { WithdrawManager } from 'typechain/core/WithdrawManager'
 
 import { ConnectedContract } from './deployedContracts'
+import { AugurPredicateTest } from 'typechain/augur/AugurPredicateTest'
 
 export type ContractType = 'plasma'|'augur-main'|'augur-matic'|'matic'
 
@@ -22,8 +23,7 @@ export enum ContractName {
   Universe = 'Universe',
   Governance = 'Governance',
   Registry = 'Registry',
-  AugurPredicate = 'AugurPredicate',
-  AugurPredicateMoreVPTest = 'AugurPredicateMoreVPTest',
+  AugurPredicate = 'AugurPredicateTest',
   ShareTokenPredicate = 'ShareTokenPredicate',
   WithdrawManager = 'WithdrawManager',
   ERC20Predicate = 'ERC20Predicate',
@@ -33,6 +33,7 @@ export enum ContractName {
   ZeroXExchange = 'Exchange',
   Cash = 'USDT',
   ShareToken = 'ShareToken',
+  ParaShareToken = 'ParaShareToken',
   TestToken = 'TestToken',
   StakeManager = 'StakeManager',
   RootChain = 'RootChain',
@@ -61,7 +62,12 @@ export enum ContractName {
   FeePot = 'FeePot',
   ParaAugur = 'ParaAugur',
   ParaUniverse = 'ParaUniverse',
-  DAI = 'DAI'
+  DAI = 'DAI',
+  ExitFillOrder = 'ExitFillOrder',
+  ExitExchange = 'ExitExchange',
+  ExitCash = 'ExitCash',
+  MultiAssetProxy = 'MultiAssetProxy',
+  ERC1155 = 'ERC1155'
 }
 
 export function toBN(value: any): BigNumber {
@@ -73,7 +79,7 @@ export type ConnectedShareToken = ConnectedContract<ShareToken>
 export type ConnectedOiCash = ConnectedContract<OiCash>
 export type ConnectedMaticOiCash = ConnectedContract<MaticOiCash>
 export type ConnectedZeroXTrade = ConnectedContract<ZeroXTrade>
-export type ConnectedAugurPredicate = ConnectedContract<AugurPredicate>
+export type ConnectedAugurPredicate = ConnectedContract<AugurPredicateTest>
 export type ConnectedUniverse = ConnectedContract<Universe>
 export type ConnectedAugur = ConnectedContract<Augur>
 export type ConnectedTime = ConnectedContract<TimeControlled>
