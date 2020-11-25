@@ -73,6 +73,8 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.maticZeroXTrade = await connectedContract(ContractName.SideChainZeroXTrade, 'augur-matic')
   this.maticZeroXExchange = await connectedContract(ContractName.ZeroXExchange, 'augur-matic')
   this.predicateRegistry = await connectedContract(ContractName.PredicateRegistry, 'augur-main')
+  this.exitCash = await connectedContract(ContractName.ExitCash, 'augur-main')
+  this.exitShareToken = await connectedContract(ContractName.ExitShareToken, 'augur-main')
   this.depositManager = await connectedContract(ContractName.DepositManager, 'plasma')
 
   await this.cash.from.faucet(defaultCashAmount)

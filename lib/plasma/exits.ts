@@ -1,11 +1,11 @@
-const rlp = require('rlp')
-
 import BN from 'bn.js'
 import { buildBlockHeaderMerkle, serializeBlockHeader, getReceiptProof, getTxProof, getReceiptBytes, getTxBytes } from './proofs'
 import { RootChainReadOnly, ExitReference, ExitPayload, Block, SerializableTransaction, TransactionReceipt, ExitData } from './types'
 import { IProviderAdapter } from './adapters/IProviderAdapter'
 import { bufferToHex, toBuffer } from 'ethereumjs-util'
 import assert from 'assert'
+
+const rlp = require('rlp')
 
 export async function buildExitReference(provider: IProviderAdapter, block: Block, tx: SerializableTransaction, receipt: TransactionReceipt): Promise<ExitReference> {
   const receiptProof = await getReceiptProof(provider, receipt, block)
@@ -28,7 +28,7 @@ export async function getExitData(provider: IProviderAdapter, txHash: string): P
   const exitTx = await provider.getTransaction(txHash)
   const receipt = await provider.getTransactionReceipt(txHash)
   const block = await provider.getBlockByHash(receipt.blockHash)
-  
+
   return {
     tx: exitTx,
     receipt,
@@ -36,8 +36,12 @@ export async function getExitData(provider: IProviderAdapter, txHash: string): P
   }
 }
 
-export function buildReferenceTxPayload(input: ExitPayload): string {
-  return bufferToHex(rlp.encode(_buildReferenceTxPayload(input)))
+export function buildReferenceTxPayload(input: ExitPayload, extraFields: any[] = []): string {
+  let args = _buildReferenceTxPayload(input)
+  if (extraFields.length > 0) {
+    args = args.concat(extraFields)
+  }
+  return bufferToHex(rlp.encode(args))
 }
 
 export async function findHeaderBlockNumber(rootChain: RootChainReadOnly, childBlockNumber: number|string): Promise<string> {

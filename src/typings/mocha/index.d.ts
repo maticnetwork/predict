@@ -23,6 +23,8 @@ import { ChildChain } from 'typechain/core/ChildChain'
 import { AugurRegistry } from 'typechain/augur/AugurRegistry'
 import { SideChainShareToken } from 'typechain/augur/SideChainShareToken'
 import { DepositManager } from 'typechain/core/DepositManager'
+import { ExitCash } from 'typechain/augur/ExitCash'
+import { ExitShareToken } from 'typechain/augur/ExitShareToken'
 
 declare module 'mocha' {
   interface Context {
@@ -46,6 +48,8 @@ declare module 'mocha' {
     depositManager: ConnectedContract<DepositManager>;
     childChain: ConnectedContract<ChildChain>;
     augurRegistry: ConnectedContract<AugurRegistry>;
+    exitCash: ConnectedContract<ExitCash>;
+    exitShareToken: ConnectedContract<ExitShareToken>;
     from: string;
     otherFrom: string;
   }

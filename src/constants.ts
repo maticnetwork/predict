@@ -21,3 +21,5 @@ export const INVALID_OUTCOME = 0
 export const NULL_ADDRESS = '0x0000000000000000000000000000000000000000'
 export const DEFAULT_RECOMMENDED_TRADE_INTERVAL = BigNumber.from(10).pow(16) // constant from Augur.sol
 export const DEFAULT_NUM_TICKS = 1000
+export const EXIT_STATUS_FINALIZED = 4
+export const EMPTY_BYTES = '0x'

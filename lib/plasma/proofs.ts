@@ -1,12 +1,12 @@
-const Trie = require('merkle-patricia-tree')
-const EthereumTransaction = require('ethereumjs-tx')
-const rlp = require('rlp')
-
 import BN from 'bn.js'
 import { keccak256, toBuffer, bufferToHex } from 'ethereumjs-util'
 import { MerkleTree } from './merkle'
 import { Block, SerializableTransaction, TransactionReceipt, ExitProof } from './types'
 import { IProviderAdapter } from './adapters/IProviderAdapter'
+
+const Trie = require('merkle-patricia-tree')
+const EthereumTransaction = require('ethereumjs-tx')
+const rlp = require('rlp')
 
 export function serializeBlockHeader(block: Block): Buffer {
   const n = new BN(block.number).toArrayLike(Buffer, 'be', 32)
@@ -42,7 +42,7 @@ async function findProof(trie: any, key: Buffer, blockHash?: string): Promise<Ex
       if (err) {
         return reject(err)
       }
-  
+
       if (reminder.length > 0) {
         return reject(new Error('Node does not contain the key'))
       }

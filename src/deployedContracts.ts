@@ -29,6 +29,8 @@ export async function getAddress(contractName: ContractName, type: ContractType)
       const universe = await getDeployed(ContractName.ParaUniverse, type) as ParaUniverse
       contractAddress = await universe.originUniverse()
     }
+  } else if (contractName === ContractName.AugurPredicateMain) {
+    contractName = ContractName.AugurPredicate
   }
 
   if (!contractAddress) {
@@ -57,6 +59,14 @@ export function getAbi(contractName: ContractName, type: ContractType): any {
   // dirty hack, swap to Cash abi in case of DAI
   if (contractName === ContractName.DAI) {
     contractName = ContractName.Cash
+  }
+
+  if (contractName === ContractName.AugurPredicate) {
+    contractName = ContractName.AugurPredicateSpec
+  }
+
+  if (contractName === ContractName.AugurPredicateMain) {
+    contractName = ContractName.AugurPredicate
   }
 
   const jsonFile = readFileSync(join(artifactPath, `${contractName}.json`)).toString()

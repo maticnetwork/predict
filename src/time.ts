@@ -15,3 +15,17 @@ export async function increaseBlockTime(this: Context, seconds: number): Promise
     increaseChainTime(this.maticTime, MaticProvider, seconds)
   ])
 }
+
+export async function takeSnapshot(): Promise<[any, any]> {
+  return Promise.all([
+    EthProvider.send('evm_snapshot', []),
+    MaticProvider.send('evm_snapshot', [])
+  ])
+}
+
+export async function revertToSnapShot(ids: [any, any]):Promise<[any, any]> {
+  return Promise.all([
+    EthProvider.send('evm_revert', [ids[0]]),
+    MaticProvider.send('evm_revert', [ids[1]])
+  ])
+}

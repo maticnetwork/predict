@@ -3,9 +3,14 @@ import { Context } from 'mocha'
 import { ContractName } from 'src/types'
 import { Market } from 'typechain/augur/Market'
 import { DisputeWindow } from 'typechain/augur/DisputeWindow'
-import { createContract } from 'src/deployedContracts'
-import { ContractTransaction } from 'ethers'
-import { DEFAULT_GAS, DEFAULT_NUM_TICKS } from './constants'
+import { connectedContract, createContract } from 'src/deployedContracts'
+import { BytesLike, ContractReceipt, ContractTransaction, Signer } from 'ethers'
+import { AUGUR_FEE, DEFAULT_GAS, EMPTY_BYTES } from './constants'
+import { ShareToken } from 'typechain/augur/ShareToken'
+import { buildReferenceTxPayload, ExitPayload, LogEntry } from '@maticnetwork/plasma'
+import { findEvents, indexOfEvent } from './events'
+import { AugurPredicate } from 'typechain/augur/AugurPredicate'
+import { assertTokenBalances } from './assert'
 
 export async function processExits(this: Context, tokenAddress: string) :Promise<ContractTransaction> {
   await increaseBlockTime.call(this, 15 * 86400)
@@ -35,4 +40,96 @@ export async function finalizeMarket(this: Context, market: Market, outcome: num
   const disputeEndTime = await disputeWindow.getEndTime()
   await this.time.from.setTimestamp(disputeEndTime.add(1))
   await market.finalize()
+}
+
+async function findSharesLogs(market: Market, logs: LogEntry[], fromAddr: string): Promise<number[]> {
+  const totalNumerators = (await market.getNumberOfOutcomes()).toNumber()
+  const logIndices = []
+  for (let i = 0; i < totalNumerators; ++i) {
+    try {
+      const logIndex = indexOfEvent({
+        logs: logs,
+        contractName: ContractName.SideChainAugur,
+        contractType: 'augur-matic',
+        eventName: 'ShareTokenBalanceChanged'
+      }, {
+        account: fromAddr,
+        market: market.address,
+        outcome: i
+      })
+
+      logIndices.push(logIndex)
+    } catch {}
+  }
+
+  if (logIndices.length === 0) {
+    throw new Error('no ShareTokenBalanceChanged events found')
+  }
+
+  logIndices.sort((x, y) => x - y)
+  return logIndices
+}
+
+export async function prepareInFlightTradeExit(
+  this: Context,
+  exitPayload: ExitPayload,
+  logs: LogEntry[],
+  from: Signer,
+  market: Market
+): Promise<void> {
+  const contract = this.augurPredicate.contract.connect(from)
+  const logIndices = await findSharesLogs(market, logs, await from.getAddress())
+  exitPayload.logIndex = logIndices.shift()!
+
+  const r = await contract.prepareInFlightTradeExit(buildReferenceTxPayload(exitPayload, logIndices), EMPTY_BYTES)
+  const p = await r.wait(0)
+  console.log('prepareInFlightTradeExit gas used: ', p.gasUsed.toString())
+}
+
+export async function startInFlightTradeExit(
+  this: Context,
+  exitPayload: ExitPayload,
+  logs: LogEntry[],
+  from: Signer,
+  counterparty: Signer,
+  market: Market,
+  inFlightTx: BytesLike
+): Promise<ContractTransaction> {
+  const contract = this.augurPredicate.contract.connect(from)
+  const logIndices = await findSharesLogs(market, logs, await counterparty.getAddress())
+  exitPayload.logIndex = logIndices.shift()!
+
+  const r = contract.startInFlightTradeExit(
+    buildReferenceTxPayload(exitPayload, logIndices),
+    EMPTY_BYTES,
+    inFlightTx,
+    await counterparty.getAddress(),
+    { value: AUGUR_FEE }
+  )
+  const p = await (await r).wait(0)
+  console.log('startInFlightTradeExit gas used: ', p.gasUsed.toString())
+  return r
+}
+
+export async function startInFlightShareTokenExit(
+  this: Context,
+  exitPayload: ExitPayload,
+  logs: LogEntry[],
+  from: Signer,
+  market: Market,
+  inFlightTx: BytesLike
+): Promise<ContractTransaction> {
+  const contract = this.augurPredicate.contract.connect(from)
+  const logIndices = await findSharesLogs(market, logs, await from.getAddress())
+  exitPayload.logIndex = logIndices.shift()!
+
+  const r = contract.startInFlightSharesAndCashExit(
+    buildReferenceTxPayload(exitPayload, logIndices),
+    inFlightTx,
+    EMPTY_BYTES,
+    EMPTY_BYTES
+  )
+  const p = await (await r).wait(0)
+  console.log('startInFlightShareTokenExit gas used: ', p.gasUsed.toString())
+  return r
 }

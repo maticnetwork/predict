@@ -9,6 +9,11 @@ import { Cash } from 'typechain/augur/Cash'
 import { ShareToken } from 'typechain/augur/ShareToken'
 import { formatBytes32String } from 'ethers/lib/utils'
 import { findEvents } from 'src/events'
+import { ExitCash } from 'typechain/augur/ExitCash'
+import { ExitShareToken } from 'typechain/augur/ExitShareToken'
+import { startInFlightTradeExit } from 'src/exits'
+import { ExitPayload, LogEntry } from '@maticnetwork/plasma'
+import { TradeReturnValues } from './shouldExecuteTrade'
 
 export interface ExecuteCensoredOrderOptions {
   orderAmount: BigNumberish;
@@ -16,8 +21,7 @@ export interface ExecuteCensoredOrderOptions {
   direction: number;
   orderCreator: Counterparty;
   orderFiller: Counterparty;
-  exitCash: () => Promise<Cash>;
-  exitShare: () => Promise<ShareToken>;
+  exitPayload: () => ExitPayload;
   market: () => Promise<MarketInfo>;
   order: () => Promise<Order>;
   expectedExitShares: {
@@ -27,7 +31,8 @@ export interface ExecuteCensoredOrderOptions {
   expectedCashDelta: {
     orderCreator: BigNumberish,
     orderFiller: BigNumberish
-  }
+  },
+  logs: () => LogEntry[]
 }
 
 export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions): void {
@@ -38,11 +43,13 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
     tradeGroupId,
     direction,
     expectedExitShares,
-    expectedCashDelta
+    expectedCashDelta,
+    logs,
+    exitPayload
   } = options
 
-  let exitCash: Cash
-  let exitShare: ShareToken
+  let exitCash: ExitCash
+  let exitShare: ExitShareToken
   let inFlightTrade: string
   let market: MarketInfo
   let fillerExitCashBalanceBeforeTrade: BigNumber
@@ -52,8 +59,8 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
   describe(`when ${orderFiller.name} executes censored ${direction === ASK_ORDER ? 'ask' : 'bid'} trade`, function() {
     before(`${orderCreator.name} creates order and Bob signs the transaction`, async function() {
       market = await options.market.call(this)
-      exitCash = await options.exitCash.call(this)
-      exitShare = await options.exitShare.call(this)
+      exitCash = this.exitCash.contract
+      exitShare = this.exitShareToken.contract
       order = await options.order.call(this)
 
       const { orders, signatures } = order
@@ -82,7 +89,15 @@ export function shouldExecuteCensoredTrade(options: ExecuteCensoredOrderOptions)
     })
 
     it('should execute in-flight transaction in augur predicate', async function() {
-      await this.augurPredicate.other.executeInFlightTransaction(inFlightTrade, { value: AUGUR_FEE })
+      await expect(startInFlightTradeExit.call(
+        this,
+        exitPayload(),
+        logs(),
+        orderFiller.wallet,
+        orderCreator.wallet,
+        market.rootMarket,
+        inFlightTrade
+      )).to.emit(this.withdrawManager.contract, 'ExitStarted')
     })
 
     it(`${orderCreator.name} should have correct market exit shares balance outcome`, async function() {

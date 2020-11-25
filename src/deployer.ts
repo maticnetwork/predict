@@ -3,18 +3,15 @@ import fs from 'fs'
 import { join } from 'path'
 import assert from 'assert'
 
-import { getDeployed, getAddress, connectedContract } from 'src/deployedContracts'
+import { getDeployed, getAddress, connectedContract, createContract } from 'src/deployedContracts'
 import { ContractName } from 'src/types'
 import { execShellCommand } from 'src/execShellCommand'
 import { deployContract } from 'ethereum-waffle'
-import { EthProvider } from 'src/providers'
 import { EthWallets, MaticWallets, OWNER_PK } from 'src/wallets'
 import { utils } from 'ethers'
 
 import TradingCashArtifact from 'artifacts/augur/TradingCash.json'
 import PredicateRegistryArtifact from 'artifacts/augur/PredicateRegistry.json'
-import ExitCashFactoryArtifact from 'artifacts/augur/ExitCashFactory.json'
-import ExitShareTokenFactoryArtifact from 'artifacts/augur/ExitShareTokenFactory.json'
 import ExitExchangeArtifact from 'artifacts/augur/ExitExchange.json'
 import AugurRegistryArtifact from 'artifacts/augur/AugurRegistry.json'
 
@@ -26,16 +23,13 @@ import { Registry } from 'typechain/core/Registry'
 import { TestToken } from 'typechain/core/TestToken'
 import { StakeManager } from 'typechain/core/StakeManager'
 import { AugurPredicate } from 'typechain/augur/AugurPredicate'
-import { DEFAULT_GAS, NULL_ADDRESS } from './constants'
+import { DEFAULT_GAS } from './constants'
 import { ChildChain } from 'typechain/core/ChildChain'
 import { TradingCash } from 'typechain/augur/TradingCash'
 import { ExitZeroXTrade } from 'typechain/augur/ExitZeroXTrade'
 import { Exchange } from 'typechain/augur/Exchange'
 import { AugurRegistry } from 'typechain/augur/AugurRegistry'
 import { FeePotPredicate } from 'typechain/augur/FeePotPredicate'
-import { Augur } from 'typechain/augur/Augur'
-import { formatBytes32String } from 'ethers/lib/utils'
-import { SideChainZeroXTrade } from 'typechain/augur/SideChainZeroXTrade'
 import { ExitExchange } from 'typechain/augur/ExitExchange'
 
 const OUTPUT_DIR = 'output'
@@ -46,10 +40,6 @@ const AugurMaticAddresses = 'addresses.augur-matic.json'
 const AugurMainAddresses = 'addresses.augur-main.json'
 const CWD = process.cwd()
 const owner = EthWallets[0]
-
-function stringTo32ByteHex(stringToEncode: string): string {
-  return `0x${Buffer.from(stringToEncode, 'utf8').toString('hex').padEnd(64, '0')}`
-}
 
 function extractAddresses(filename: string) {
   let contracts: {[key:string]: string} = { }
@@ -260,7 +250,7 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
     ])
   )
 
-  const AugurPredicate = await getDeployed(ContractName.AugurPredicate, 'augur-main') as AugurPredicate
+  const AugurPredicate = await createContract<AugurPredicate>(await getAddress(ContractName.AugurPredicate, 'augur-main'), ContractName.AugurPredicateMain, 'augur-main')
 
   if (
     await plasmaRegistry.predicates(AugurPredicate.address) === 0
@@ -284,13 +274,6 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
   const ERC20PredicateAddr = await getAddress(ContractName.ERC20Predicate, 'plasma')
   const AugurAddr = await getAddress(ContractName.Augur, 'augur-main')
   const RegistryAddr = await getAddress(ContractName.Registry, 'plasma')
-  const exitCashFactory = await deployContract(owner, ExitCashFactoryArtifact, [], {
-    gasLimit: DEFAULT_GAS
-  })
-
-  const exitShareTokenFactory = await deployContract(owner, ExitShareTokenFactoryArtifact, [], {
-    gasLimit: DEFAULT_GAS
-  })
   await AugurPredicate.connect(owner).initializeForMatic(
     predicateRegistry.address,
     WithdrawManagerProxyAddr,
@@ -300,8 +283,8 @@ async function initializeAugurPredicate(predicateRegistry: PredicateRegistry):Pr
     AugurAddr,
     ShareTokenPredicate.address,
     RegistryAddr,
-    exitShareTokenFactory.address,
-    exitCashFactory.address,
+    await getAddress(ContractName.ExitCash, 'augur-main'),
+    await getAddress(ContractName.ExitShareToken, 'augur-main'),
     await getAddress(ContractName.DepositManager, 'plasma'),
     await getAddress(ContractName.FeePot, 'augur-main')
   )
