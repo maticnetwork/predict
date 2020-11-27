@@ -4,7 +4,7 @@ import { RootChainReadWrite, HeaderBlockPayload, ValidatorWallet } from './types
 import { keccak256, toBuffer, ecsign, toRpcSig, bufferToHex } from 'ethereumjs-util'
 import { IProviderAdapter } from '../plasma/adapters/IProviderAdapter'
 import { MATIC_CHAIN_ID } from 'src/constants'
-import { utils } from 'ethers'
+import { BigNumber, utils } from 'ethers'
 
 const Web3EthAbi = require('web3-eth-abi')
 
@@ -41,9 +41,15 @@ export function buildSubmitHeaderBlockPayload(
   return { data, sigs: bufferToHex(combinedSigs) }
 }
 
+interface SavedState {
+  offset: number;
+  lastBlockNumber: number;
+}
+
 export class CheckpointHelper {
   private maticProvider: IProviderAdapter
   private offset: number
+  private savedState: SavedState
   private lastBlockNumber: number
   private rootChain: RootChainReadWrite
 
@@ -51,7 +57,23 @@ export class CheckpointHelper {
     this.maticProvider = maticProvider
     this.lastBlockNumber = -1
     this.offset = 0
+    this.savedState = {
+      offset: 0,
+      lastBlockNumber: -1
+    }
     this.rootChain = rootChain
+  }
+
+  saveState(): void {
+    this.savedState = {
+      offset: this.offset,
+      lastBlockNumber: this.lastBlockNumber
+    }
+  }
+
+  rollbackState(): void {
+    this.offset = this.savedState.offset
+    this.lastBlockNumber = this.savedState.lastBlockNumber
   }
 
   async submitCheckpoint(

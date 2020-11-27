@@ -3,7 +3,6 @@ import { BigNumber, Wallet } from 'ethers'
 import { Cash } from 'typechain/augur/Cash'
 import { OiCash } from 'typechain/augur/OiCash'
 import { TradingCash as MaticOiCash } from 'typechain/augur/TradingCash'
-import { AugurPredicate } from 'typechain/augur/AugurPredicate'
 import { Universe } from 'typechain/augur/Universe'
 import { Augur } from 'typechain/augur/Augur'
 import { PredicateRegistry } from 'typechain/augur/PredicateRegistry'
@@ -94,4 +93,5 @@ export type ConnectedWithdrawManager = ConnectedContract<WithdrawManager>
 export interface Counterparty {
   name: string;
   wallet: Wallet;
+  maticWallet: Wallet;
 }

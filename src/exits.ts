@@ -70,6 +70,32 @@ async function findSharesLogs(market: Market, logs: LogEntry[], fromAddr: string
   return logIndices
 }
 
+async function findCashLogs(market: Market, logs: LogEntry[], fromAddr: string): Promise<number[]> {
+  const totalNumerators = (await market.getNumberOfOutcomes()).toNumber()
+  const logIndices = []
+  for (let i = 0; i < totalNumerators; ++i) {
+    try {
+      const logIndex = indexOfEvent({
+        logs: logs,
+        contractName: ContractName.TradingCash,
+        contractType: 'augur-matic',
+        eventName: 'LogTransfer'
+      }, {
+        from: fromAddr
+      })
+
+      logIndices.push(logIndex)
+    } catch {}
+  }
+
+  if (logIndices.length === 0) {
+    throw new Error('no LogTransfer events found')
+  }
+
+  logIndices.sort((x, y) => x - y)
+  return logIndices
+}
+
 export async function prepareInFlightTradeExit(
   this: Context,
   exitPayload: ExitPayload,
@@ -108,28 +134,55 @@ export async function startInFlightTradeExit(
   )
   const p = await (await r).wait(0)
   console.log('startInFlightTradeExit gas used: ', p.gasUsed.toString())
+
   return r
 }
 
-export async function startInFlightShareTokenExit(
+export enum ShareAndCashExitType {
+  OnlyShares = 1,
+  OnlyCash = 1 << 1,
+  SharesAndCash = 1 | (1 << 1)
+}
+
+export async function startInFlightSharesAndCashExit(
   this: Context,
   exitPayload: ExitPayload,
   logs: LogEntry[],
   from: Signer,
   market: Market,
-  inFlightTx: BytesLike
+  inFlightTxShares: BytesLike,
+  inFlightTxCash: BytesLike,
+  exitType: ShareAndCashExitType = ShareAndCashExitType.SharesAndCash
 ): Promise<ContractTransaction> {
   const contract = this.augurPredicate.contract.connect(from)
-  const logIndices = await findSharesLogs(market, logs, await from.getAddress())
-  exitPayload.logIndex = logIndices.shift()!
+  let sharesExit = EMPTY_BYTES
+  let cashExit = EMPTY_BYTES
+  let logIndices: number[]
+
+  if (exitType & ShareAndCashExitType.OnlyShares) {
+    try {
+      logIndices = await findSharesLogs(market, logs, await from.getAddress())
+      exitPayload.logIndex = logIndices.shift()!
+      sharesExit = buildReferenceTxPayload(exitPayload, logIndices)
+    } catch {}
+  }
+
+  if (exitType & ShareAndCashExitType.OnlyCash) {
+    try {
+      logIndices = await findCashLogs(market, logs, await from.getAddress())
+      exitPayload.logIndex = logIndices.shift()!
+      cashExit = buildReferenceTxPayload(exitPayload, logIndices)
+    } catch (exc) {console.error(exc)}
+  }
 
   const r = contract.startInFlightSharesAndCashExit(
-    buildReferenceTxPayload(exitPayload, logIndices),
-    inFlightTx,
-    EMPTY_BYTES,
-    EMPTY_BYTES
+    sharesExit,
+    inFlightTxShares,
+    cashExit,
+    inFlightTxCash
   )
   const p = await (await r).wait(0)
-  console.log('startInFlightShareTokenExit gas used: ', p.gasUsed.toString())
+  console.log('startInFlightSharesAndCashExit gas used: ', p.gasUsed.toString())
+
   return r
 }

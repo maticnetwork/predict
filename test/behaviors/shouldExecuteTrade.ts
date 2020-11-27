@@ -57,42 +57,42 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
     })
 
     before('save balances', async function() {
-      orderCreatorInitialBalance = await this.maticCash.contract.balanceOf(orderCreator.wallet.address)
-      orderFillerInitialBalance = await this.maticCash.contract.balanceOf(orderFiller.wallet.address)
+      orderCreatorInitialBalance = await this.maticCash.contract.balanceOf(orderCreator.maticWallet.address)
+      orderFillerInitialBalance = await this.maticCash.contract.balanceOf(orderFiller.maticWallet.address)
     })
 
     it('should trade', async function() {
       const { orders, signatures } = order
       const amountRemaining = await this.maticZeroXTrade
-        .contract.connect(orderFiller.wallet)
+        .contract.connect(orderFiller.maticWallet)
         .callStatic.trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
       expect(amountRemaining).to.be.eq(fillAmount.sub(orderAmount))
 
       const tradeTx = await this.maticZeroXTrade
-        .contract.connect(orderFiller.wallet)
+        .contract.connect(orderFiller.maticWallet)
         .trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
       returnValues.tradeReceipt = await tradeTx.wait(0)
     })
 
     it(`${orderCreator.name} must have correct market balance outcome`, async function() {
-      await assertTokenBalances(this.maticShareToken.contract, market.address, orderCreator.wallet.address, expectedExitShares.orderCreator)
+      await assertTokenBalances(this.maticShareToken.contract, market.address, orderCreator.maticWallet.address, expectedExitShares.orderCreator)
     })
 
     it(`${orderCreator.name} must have correct cash balance`, async function() {
       expect(
-        await this.maticCash.contract.balanceOf(orderCreator.wallet.address)
+        await this.maticCash.contract.balanceOf(orderCreator.maticWallet.address)
       ).to.be.gte(orderCreatorInitialBalance.sub(filledAmount.mul(sharePrice)))
     })
 
     it(`${orderFiller.name} must have correct market balance outcome`, async function() {
-      await assertTokenBalances(this.maticShareToken.contract, market.address, orderFiller.wallet.address, expectedExitShares.orderFiller)
+      await assertTokenBalances(this.maticShareToken.contract, market.address, orderFiller.maticWallet.address, expectedExitShares.orderFiller)
     })
 
     it(`${orderFiller.name} must have correct cash balance`, async function() {
       expect(
-        await this.maticCash.contract.balanceOf(orderFiller.wallet.address)
+        await this.maticCash.contract.balanceOf(orderFiller.maticWallet.address)
       ).to.be.gte(orderFillerInitialBalance.sub(filledAmount.mul(BigNumber.from(market.numTicks).sub(sharePrice))))
     })
   })
