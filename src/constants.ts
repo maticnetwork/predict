@@ -8,6 +8,7 @@ export const DEFAULT_MARKET_DURATION = DAY * 15 // exit manager requires 14 days
 export const MAX_AMOUNT = '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe'
 export const MATIC_CHAIN_ID = 15001
 export const AUGUR_FEE = utils.parseEther('0.11')
+export const BOND_AMOUNT = utils.parseEther('0.1')
 export const MAX_FEE = 15
 export const DEFAULT_TRADE_GROUP = utils.hexZeroPad(utils.hexValue(42), 32)
 export const VALIDATORS = EthWallets.map(x => {
@@ -23,3 +24,4 @@ export const DEFAULT_RECOMMENDED_TRADE_INTERVAL = BigNumber.from(10).pow(16) // 
 export const DEFAULT_NUM_TICKS = 1000
 export const EXIT_STATUS_FINALIZED = 4
 export const EMPTY_BYTES = '0x'
+export const TRADE_GROUP_ID = utils.hexZeroPad(utils.hexValue(42), 32)

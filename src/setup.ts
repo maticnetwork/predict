@@ -60,6 +60,7 @@ export async function deployAndPrepareTrading(this: Context): Promise<void> {
   this.withdrawManager = await connectedContract(ContractName.WithdrawManager, 'plasma')
   this.checkpointHelper = new CheckpointHelper(new EthersAdapter(MaticProvider), new RootchainAdapter(this.rootChain.connect(from)))
   this.augurPredicate = await connectedContract(ContractName.AugurPredicate, 'augur-main')
+  this.augurPredicateMain = await connectedContract(ContractName.AugurPredicateMain, 'augur-main')
   this.oiCash = await connectedContract(ContractName.OICash, 'augur-main')
   this.maticOICash = await connectedContract(ContractName.OICash, 'augur-matic')
   this.cash = await connectedContract(ContractName.Cash, 'augur-main')

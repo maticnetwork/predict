@@ -23,7 +23,7 @@ import { ParaUniverse } from 'typechain/augur/ParaUniverse'
 
 use(solidity)
 
-describe.only('AugurPredicate: In-flight cash and shares exit', function() {
+describe('AugurPredicate: In-flight cash and shares exit', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
   const tradeGroupId = DEFAULT_TRADE_GROUP
@@ -198,6 +198,7 @@ describe.only('AugurPredicate: In-flight cash and shares exit', function() {
             predicateBeforeOIBalanceDeposit
               .sub(bobExitCashBalanceBeforeExit)
               .sub(aliceExitCashBalanceBeforeExit)
+              .sub(transferAmount)
           )
         })
       })

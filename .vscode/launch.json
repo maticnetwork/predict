@@ -4,19 +4,24 @@
     {
       "type": "node",
       "request": "launch",
+      "cwd": "${workspaceFolder}",
       "name": "Mocha All",
+      "runtimeVersion": "10.22.0",
       "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
       "args": [
         "--timeout",
         "0",
-        "--require",
-        "@babel/register",
-        "--require",
-        "@babel/polyfill",
-        "${workspaceFolder}/test"
+        "-r",
+        "ts-node/register",
+        "-r",
+        "tsconfig-paths/register",
+        "r",
+        "source-map-support/register",
+        "\"test/**/*.{ts,tsx}\""
       ],
       "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "internalConsoleOptions": "neverOpen",
+      "autoAttachChildProcesses": false
     },
     {
       "type": "node",

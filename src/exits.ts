@@ -5,12 +5,13 @@ import { Market } from 'typechain/augur/Market'
 import { DisputeWindow } from 'typechain/augur/DisputeWindow'
 import { connectedContract, createContract } from 'src/deployedContracts'
 import { BytesLike, ContractReceipt, ContractTransaction, Signer } from 'ethers'
-import { AUGUR_FEE, DEFAULT_GAS, EMPTY_BYTES } from './constants'
+import { AUGUR_FEE, BOND_AMOUNT, DEFAULT_GAS, EMPTY_BYTES } from './constants'
 import { ShareToken } from 'typechain/augur/ShareToken'
 import { buildReferenceTxPayload, ExitPayload, LogEntry } from '@maticnetwork/plasma'
 import { findEvents, indexOfEvent } from './events'
 import { AugurPredicate } from 'typechain/augur/AugurPredicate'
 import { assertTokenBalances } from './assert'
+import { syncMarketFinalized } from './utils'
 
 export async function processExits(this: Context, tokenAddress: string) :Promise<ContractTransaction> {
   await increaseBlockTime.call(this, 15 * 86400)
@@ -40,6 +41,9 @@ export async function finalizeMarket(this: Context, market: Market, outcome: num
   const disputeEndTime = await disputeWindow.getEndTime()
   await this.time.from.setTimestamp(disputeEndTime.add(1))
   await market.finalize()
+
+  // sync finalization with Matic
+  await syncMarketFinalized(this.augurRegistry.from, market, numerators)
 }
 
 async function findSharesLogs(market: Market, logs: LogEntry[], fromAddr: string): Promise<number[]> {
@@ -130,7 +134,7 @@ export async function startInFlightTradeExit(
     EMPTY_BYTES,
     inFlightTx,
     await counterparty.getAddress(),
-    { value: AUGUR_FEE }
+    { value: AUGUR_FEE.add(BOND_AMOUNT) }
   )
   const p = await (await r).wait(0)
   console.log('startInFlightTradeExit gas used: ', p.gasUsed.toString())
@@ -179,7 +183,8 @@ export async function startInFlightSharesAndCashExit(
     sharesExit,
     inFlightTxShares,
     cashExit,
-    inFlightTxCash
+    inFlightTxCash,
+    { value: BOND_AMOUNT }
   )
   const p = await (await r).wait(0)
   console.log('startInFlightSharesAndCashExit gas used: ', p.gasUsed.toString())

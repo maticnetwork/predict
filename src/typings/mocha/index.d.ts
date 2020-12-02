@@ -25,6 +25,7 @@ import { SideChainShareToken } from 'typechain/augur/SideChainShareToken'
 import { DepositManager } from 'typechain/core/DepositManager'
 import { ExitCash } from 'typechain/augur/ExitCash'
 import { ExitShareToken } from 'typechain/augur/ExitShareToken'
+import { AugurPredicate } from 'typechain/augur/AugurPredicate'
 
 declare module 'mocha' {
   interface Context {
@@ -34,6 +35,7 @@ declare module 'mocha' {
     augur: ConnectedAugur;
     maticAugur: ConnectedAugur;
     augurPredicate: ConnectedAugurPredicate;
+    augurPredicateMain: ConnectedContract<AugurPredicate>;
     oiCash: ConnectedOiCash;
     maticOICash: ConnectedMaticOiCash;
     maticZeroXExchange: ConnectedZeroXExchange;

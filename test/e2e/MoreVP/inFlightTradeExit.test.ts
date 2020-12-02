@@ -4,7 +4,7 @@ import { BigNumber, utils } from 'ethers'
 
 import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { BID_ORDER, NO_OUTCOME, DEFAULT_RECOMMENDED_TRADE_INTERVAL } from 'src/constants'
+import { BID_ORDER, NO_OUTCOME, DEFAULT_RECOMMENDED_TRADE_INTERVAL, TRADE_GROUP_ID } from 'src/constants'
 import { createOrder } from 'src/orders'
 import { deployAndPrepareTrading, MarketInfo, createMarket } from 'src/setup'
 
@@ -12,14 +12,14 @@ import { shouldExecuteTrade, TradeReturnValues } from '../../behaviors/shouldExe
 import { Context } from 'mocha'
 import { scenario1 } from './inFlightTradeExit.scenario1'
 import { scenario2 } from './inFlightTradeExit.scenario2'
+import { deprecation } from './inFlightTradeExit.deprecation'
 import { revertToSnapShot, takeSnapshot } from 'src/time'
 
 use(solidity)
 
-describe('AugurPredicate: In-flight trade exit', function() {
+describe.only('AugurPredicate: In-flight trade exit', function() {
   const [alice, bob] = EthWallets
   const [aliceMatic, bobMatic] = MaticWallets
-  const tradeGroupId = utils.hexZeroPad(utils.hexValue(42), 32)
 
   const firstOrderAmount = BigNumber.from(1000).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
   const fillAmount = BigNumber.from(1200).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
@@ -43,7 +43,7 @@ describe('AugurPredicate: In-flight trade exit', function() {
     returnValues: firstTradeResult,
     orderCreator: { name: 'Alice', wallet: alice, maticWallet: aliceMatic },
     orderFiller: { name: 'Bob', wallet:  bob, maticWallet: bobMatic },
-    tradeGroupId,
+    tradeGroupId: TRADE_GROUP_ID,
     direction: BID_ORDER,
     market: async() => market,
     order: async function(this: Context) {
@@ -82,6 +82,7 @@ describe('AugurPredicate: In-flight trade exit', function() {
     })
 
     // scenario1(()=>firstTradeResult, ()=>market, resetSnapshot)
-    scenario2(() => firstTradeResult, () => market, resetSnapshot)
+    // scenario2(() => firstTradeResult, () => market, resetSnapshot)
+    deprecation(() => firstTradeResult, () => market, resetSnapshot)
   })
 })

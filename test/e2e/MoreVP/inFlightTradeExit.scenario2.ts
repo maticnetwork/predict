@@ -5,7 +5,7 @@ import { BigNumber, utils } from 'ethers'
 import { ContractName } from 'src/types'
 import { EthWallets, MaticWallets } from 'src/wallets'
 
-import { BID_ORDER, MAX_FEE, VALIDATORS, YES_OUTCOME, DEFAULT_RECOMMENDED_TRADE_INTERVAL, DEFAULT_NUM_TICKS, EMPTY_BYTES } from 'src/constants'
+import { BID_ORDER, MAX_FEE, VALIDATORS, YES_OUTCOME, DEFAULT_RECOMMENDED_TRADE_INTERVAL, DEFAULT_NUM_TICKS, EMPTY_BYTES, TRADE_GROUP_ID } from 'src/constants'
 import { createOrder, Order } from 'src/orders'
 import { ExitPayload } from '@maticnetwork/plasma'
 import { MarketInfo } from 'src/setup'
@@ -24,7 +24,6 @@ export function scenario2(firstTradeResultGetter: ()=>TradeReturnValues, marketG
   describe('Scenario 2', function() {
     const [alice, bob] = EthWallets
     const [aliceMatic, bobMatic] = MaticWallets
-    const tradeGroupId = utils.hexZeroPad(utils.hexValue(42), 32)
 
     const firstOrderAmount = BigNumber.from(1000).mul(DEFAULT_RECOMMENDED_TRADE_INTERVAL)
     const firstOrderFilledAmount = firstOrderAmount
@@ -91,7 +90,7 @@ export function scenario2(firstTradeResultGetter: ()=>TradeReturnValues, marketG
           describe('when Bob start exit by claiming Alice shares and cash, and executing in-flight trade', async function() {
             shouldExecuteCensoredTrade({
               orderAmount: secondOrderAmount,
-              tradeGroupId,
+              tradeGroupId: TRADE_GROUP_ID,
               market: async() => market,
               orderCreator: { name: 'Alice', wallet: alice, maticWallet: aliceMatic },
               orderFiller: { name: 'Bob', wallet: bob, maticWallet: bobMatic },

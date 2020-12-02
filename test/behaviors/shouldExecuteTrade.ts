@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { AUGUR_FEE, ASK_ORDER } from 'src/constants'
+import { AUGUR_FEE, ASK_ORDER, DEFAULT_GAS } from 'src/constants'
 import { ContractName, Counterparty } from 'src/types'
 import { Order } from 'src/orders'
 import { assertTokenBalances } from 'src/assert'
@@ -50,7 +50,7 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
   let order: Order
   const filledAmount = fillAmount.lt(orderAmount) ? fillAmount : orderAmount
 
-  describe(`${orderFiller.name} fills ${direction === ASK_ORDER ? 'ask' : 'bid'} of ${orderCreator.name}`, function() {
+  describe(`${orderFiller.name} fills ${direction === ASK_ORDER ? 'ask' : 'bid'} of ${orderCreator.name} on Matic side`, function() {
     before('get market and order', async function() {
       market = await options.market.call(this)
       order = await options.order.call(this)
@@ -63,17 +63,43 @@ export function shouldExecuteTrade(options: ExecuteOrderOptions): void {
 
     it('should trade', async function() {
       const { orders, signatures } = order
+
+      // console.log('call')
       const amountRemaining = await this.maticZeroXTrade
         .contract.connect(orderFiller.maticWallet)
         .callStatic.trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
 
       expect(amountRemaining).to.be.eq(fillAmount.sub(orderAmount))
 
+      // console.log('send')
+      // console.log(`${orderCreator.name} balances`)
+      // console.log(orderCreatorInitialBalance.toString())
+      // await assertTokenBalances(this.maticShareToken.contract, market.address, orderCreator.maticWallet.address, [0, 0, 0])
+
+      // console.log(`${orderFiller.name} balances`)
+      // console.log(orderFillerInitialBalance.toString())
+      // await assertTokenBalances(this.maticShareToken.contract, market.address, orderFiller.maticWallet.address, [0, 0, 0])
+
       const tradeTx = await this.maticZeroXTrade
         .contract.connect(orderFiller.maticWallet)
-        .trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE })
+        .trade(fillAmount, formatBytes32String('11'), tradeGroupId, 0, 1, orders, signatures, { value: AUGUR_FEE, gasLimit: DEFAULT_GAS })
 
       returnValues.tradeReceipt = await tradeTx.wait(0)
+
+      // console.log(JSON.stringify(findEvents({
+      //   logs: returnValues.tradeReceipt.logs,
+      //   eventName: 'Test',
+      //   contractName: ContractName.SideChainFillOrder,
+      //   contractType: 'augur-matic'
+      // })[0], null, 2))
+
+      // console.log(`${orderCreator.name} balances`)
+      // console.log(orderCreatorInitialBalance.toString())
+      // await assertTokenBalances(this.maticShareToken.contract, market.address, orderCreator.maticWallet.address, [0, 0, 0])
+
+      // console.log(`${orderFiller.name} balances`)
+      // console.log(orderFillerInitialBalance.toString())
+      // await assertTokenBalances(this.maticShareToken.contract, market.address, orderFiller.maticWallet.address, [0, 0, 0])
     })
 
     it(`${orderCreator.name} must have correct market balance outcome`, async function() {
